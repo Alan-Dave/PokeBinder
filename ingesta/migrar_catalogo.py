@@ -236,6 +236,16 @@ def main() -> int:
         return 1
 
     password = getpass.getpass("Contraseña de la base de datos: ")
+    # En Windows, Ctrl+V dentro de getpass envía un carácter de control en vez
+    # de pegar el texto. Se avisa sin mostrar la contraseña.
+    if not password.isprintable() or password != password.strip():
+        print(
+            "La contraseña trae caracteres invisibles o espacios en los extremos. "
+            "Escríbela a mano o pégala con clic derecho.",
+            file=sys.stderr,
+        )
+        return 1
+
     total = cargar(cartas, sets, url, password)
     print(f"Carga completa. Cartas en la base de datos: {total}")
     return 0
