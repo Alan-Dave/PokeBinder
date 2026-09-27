@@ -6,9 +6,9 @@ Uso (PowerShell):
     python ingesta/migrar_catalogo.py C:\\ruta\\PokeDatabase.db --dry-run
 
     # 2. Cargar. La cadena de conexión es la del Session pooler de Supabase
-    #    (Connect -> Session pooler) y se pasa por variable de entorno para
-    #    que la contraseña no quede en el historial ni en un archivo.
-    $env:SUPABASE_DB_URL = "postgresql://..."
+    #    (Connect -> Session pooler), SIN la contraseña: PowerShell guarda cada
+    #    comando en su historial. El script pide la contraseña sin mostrarla.
+    $env:SUPABASE_DB_URL = "postgresql://postgres.<ref>@<host>.pooler.supabase.com:5432/postgres"
     python ingesta/migrar_catalogo.py C:\\ruta\\PokeDatabase.db
 
 Se puede ejecutar más de una vez: las cartas existentes se actualizan y no se
@@ -17,6 +17,7 @@ a medias.
 """
 
 import argparse
+import getpass
 import os
 import sqlite3
 import sys
@@ -141,11 +142,13 @@ def leer_origen(ruta: Path) -> tuple[list[Carta], list[str]]:
         con.close()
 
 
-def cargar(cartas: list[Carta], sets: dict[tuple[str, str], str | None], url: str) -> int:
+def cargar(
+    cartas: list[Carta], sets: dict[tuple[str, str], str | None], url: str, password: str
+) -> int:
     import psycopg  # Solo se necesita al cargar, no en --dry-run.
 
     # sslmode=require: la contraseña y los datos nunca viajan sin cifrar.
-    with psycopg.connect(url, sslmode="require") as con, con.cursor() as cur:
+    with psycopg.connect(url, password=password, sslmode="require") as con, con.cursor() as cur:
         cur.execute("""
             create temp table staging_sets (id text, idioma text, nombre text) on commit drop;
             create temp table staging_cartas (
@@ -224,8 +227,16 @@ def main() -> int:
     if not url:
         print("Falta la variable de entorno SUPABASE_DB_URL.", file=sys.stderr)
         return 1
+    if ":" in url.split("://", 1)[-1].split("@", 1)[0]:
+        print(
+            "SUPABASE_DB_URL incluye la contraseña. Quítala de la cadena: "
+            "el script la pide aparte para que no quede en el historial.",
+            file=sys.stderr,
+        )
+        return 1
 
-    total = cargar(cartas, sets, url)
+    password = getpass.getpass("Contraseña de la base de datos: ")
+    total = cargar(cartas, sets, url, password)
     print(f"Carga completa. Cartas en la base de datos: {total}")
     return 0
 
