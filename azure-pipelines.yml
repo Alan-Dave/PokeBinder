@@ -1,0 +1,96 @@
+# Pipeline de integración continua de PokeBinder.
+#
+# Valida cada Pull Request hacia develop o main y cada push a esas ramas.
+# Si cualquier paso falla, el pipeline queda en rojo y el PR no debe fusionarse.
+#
+# Orden: primero lo más barato y lo más grave (secretos), al final la compilación.
+#
+# Variables requeridas en Azure DevOps (Pipelines -> Edit -> Variables),
+# ninguna secreta:
+#   NEXT_PUBLIC_SUPABASE_URL
+#   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+# La clave secreta de Supabase no se usa aquí.
+
+trigger:
+  branches:
+    include:
+      - develop
+      - main
+
+pr:
+  branches:
+    include:
+      - develop
+      - main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  GITLEAKS_VERSION: 8.24.0
+  PIP_AUDIT_VERSION: 2.7.3
+  NEXT_TELEMETRY_DISABLED: 1
+
+steps:
+  # Historial completo: gitleaks revisa todos los commits, no solo el último.
+  # Un secreto borrado en un commit posterior sigue expuesto en el historial.
+  - checkout: self
+    fetchDepth: 0
+    displayName: Obtener el código
+
+  - task: NodeTool@0
+    inputs:
+      versionSpec: 20.x
+    displayName: Usar Node.js 20
+
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.11'
+    displayName: Usar Python 3.11
+
+  # 1. Escaneo de secretos.
+  # Se verifica la suma SHA-256 del binario antes de ejecutarlo.
+  # --redact evita que un secreto encontrado quede impreso en el log.
+  - script: |
+      set -euo pipefail
+      base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+      archivo="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+      curl -sSfL -o "$archivo" "$base/$archivo"
+      curl -sSfL -o checksums.txt "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+      grep " $archivo\$" checksums.txt | sha256sum --check --strict
+      tar -xzf "$archivo" gitleaks
+      ./gitleaks git --redact --verbose .
+    displayName: Escanear secretos (gitleaks)
+
+  # 2. Instalación con las versiones exactas del package-lock.json.
+  - script: npm ci
+    displayName: Instalar dependencias (npm ci)
+
+  # 3. Dependencias vulnerables. Falla ante severidad alta o crítica.
+  - script: npm audit --audit-level=high
+    displayName: Revisar dependencias npm (npm audit)
+
+  - script: |
+      set -euo pipefail
+      python -m pip install --quiet "pip-audit==${PIP_AUDIT_VERSION}"
+      pip-audit --requirement ingesta/requirements.txt
+    displayName: Revisar dependencias Python (pip-audit)
+
+  # 4. Análisis estático. El script ya exige cero advertencias.
+  - script: npm run lint
+    displayName: Análisis estático (ESLint)
+
+  # 5. Pruebas.
+  - script: npm run test
+    displayName: Pruebas de la aplicación (Vitest)
+
+  - script: python -m unittest discover ingesta
+    displayName: Pruebas de la ingesta (unittest)
+
+  # 6. Compilación. Falla ante errores de TypeScript y valida las variables
+  # de entorno con el mismo esquema zod que usa la aplicación.
+  - script: npm run build
+    displayName: Compilar (next build)
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: $(NEXT_PUBLIC_SUPABASE_URL)
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: $(NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
