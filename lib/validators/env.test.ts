@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { esClaveSecreta, parsePublicEnv } from "./env";
+import { esClaveSecreta, parsePublicEnv, parseServerEnv } from "./env";
 
 // Construye un JWT sin firma válida: solo interesa el payload.
 function jwtConRol(role: string): string {
@@ -51,5 +51,31 @@ describe("parsePublicEnv", () => {
 describe("esClaveSecreta", () => {
   it("no confunde texto con puntos con un JWT", () => {
     expect(esClaveSecreta("a.b.c")).toBe(false);
+  });
+});
+
+describe("parseServerEnv", () => {
+  it("acepta la clave secreta nueva", () => {
+    const env = parseServerEnv({ SUPABASE_SECRET_KEY: "sb_secret_xyz" });
+    expect(env.SUPABASE_SECRET_KEY).toBe("sb_secret_xyz");
+  });
+
+  it("acepta la clave service_role antigua en formato JWT", () => {
+    const clave = jwtConRol("service_role");
+    expect(() => parseServerEnv({ SUPABASE_SECRET_KEY: clave })).not.toThrow();
+  });
+
+  it("rechaza la clave publicable por error en la variable del servidor", () => {
+    const env = { SUPABASE_SECRET_KEY: "sb_publishable_abc123" };
+    expect(() => parseServerEnv(env)).toThrow(/no es una clave secreta/);
+  });
+
+  it("rechaza la clave anon en formato JWT", () => {
+    const env = { SUPABASE_SECRET_KEY: jwtConRol("anon") };
+    expect(() => parseServerEnv(env)).toThrow(/no es una clave secreta/);
+  });
+
+  it("falla si falta la variable", () => {
+    expect(() => parseServerEnv({})).toThrow(/Falta SUPABASE_SECRET_KEY/);
   });
 });
