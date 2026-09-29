@@ -41,6 +41,48 @@ distinción, para el estado actual del proyecto (PBI-03, 04, 07 y 08).
 | Ruta de la imagen de cada carta (`cartas.imagen_path`) | Tabla propia | Público (no personal) | No es un dato de usuario: es la ubicación de un archivo del catálogo. Se expone sin problema por la misma política pública de `cartas`; lo que protege el bucket es que la ruta sola no sirve sin una URL firmada ([`imagen_path`](../supabase/migrations/20260928050000_imagen_path.sql)). |
 | Catálogo (`cartas`, `sets`) | Tablas propias | Público | Lectura abierta a propósito. Sin escritura desde la API: solo el script de ingesta, por conexión directa. |
 
+## Políticas de RLS por tabla
+
+Verificación de la regla 3 (`CLAUDE.md`): toda tabla con datos de usuario lleva
+RLS activada y una política con `using` **y** `with check`. Hay 7 tablas en el
+proyecto; ninguna quedó sin RLS.
+
+| Tabla | RLS | Políticas de escritura | `using` + `with check` |
+|---|---|---|---|
+| `sets`, `cartas` | Activa | Ninguna — la escritura está revocada por completo ([`catalogo.sql`](../supabase/migrations/20260926213011_catalogo.sql)) | No aplica: son catálogo público, no dato de usuario. La política de lectura solo lleva `using`, que es lo correcto para `select` |
+| `perfiles` | Activa | `update`, restringida a la propia fila | Ambos. Además, `grant update (nombre_visible)` bloquea a nivel de columna que alguien escriba su propio `rol`, aunque sea su fila |
+| `inventario` | Activa | `for all`, restringida a `usuario_id = auth.uid()` | Ambos |
+| `mazos` | Activa | `for all`, restringida a `usuario_id = auth.uid()` | Ambos |
+| `mazo_cartas` | Activa | `for all`, vía subconsulta a `mazos` (el mazo debe ser del usuario) | Ambos |
+| `auditoria` | Activa | Ninguna política, para ningún comando | Más estricto que la regla: ni siquiera se intenta permitir un caso. Solo escriben funciones `security definer` |
+
+**Por qué las políticas de solo lectura no llevan `with check`:** `with check`
+solo tiene efecto en `insert`/`update`; agregarlo a una política de `select` no
+hace nada. El riesgo real que la regla 3 busca evitar —crear o modificar una
+fila a nombre de otro usuario— solo existe en políticas de escritura, y todas
+las que hay en el proyecto (`perfiles.update`, `inventario`, `mazos`,
+`mazo_cartas`) ya llevan ambas cláusulas.
+
+**Storage:** los buckets `Images` y `Assets` son privados y `storage.objects`
+no tiene ninguna política para ellos ([`buckets_storage.sql`](../supabase/migrations/20260927120000_buckets_storage.sql)).
+Ni `anon` ni `authenticated` pueden leer, subir ni borrar un archivo. Solo
+`service_role` opera sobre ellos, y en el código eso queda acotado a firmar
+URLs ([`admin.ts`](../lib/supabase/admin.ts)) — nunca a leer o escribir tablas.
+
+**Funciones con control de rol propio:** `asignar_rol` y `listar_perfiles`
+([`asignar_roles.sql`](../supabase/migrations/20260928020000_asignar_roles.sql))
+no son políticas RLS, pero cumplen el mismo propósito para la asignación de
+roles: `execute` revocado a `public` y `anon`, otorgado solo a `authenticated`,
+y el rol de quien llama se verifica dentro de la función. Probado en vivo
+contra el proyecto remoto (seis casos: autoascenso, degradar a otro sin ser
+superusuario, autodegradación, asignación válida con su registro en
+auditoría, `listar_perfiles` con y sin el rol, y sin sesión).
+
+**Pendiente de probar en vivo:** que los triggers de `auditoria` bloqueen
+`update`, `delete` y `truncate` incluso para `service_role` (regla 7). El
+código está escrito para eso, pero a diferencia de `asignar_rol` nunca se
+ejecutó la prueba contra el proyecto remoto.
+
 ## Pendiente, fuera de esta entrega
 
 - **Fecha de nacimiento:** no se recolecta todavía. Sigue pendiente la decisión
