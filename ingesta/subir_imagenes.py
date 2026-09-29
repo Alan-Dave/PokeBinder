@@ -159,6 +159,7 @@ def listar_objetos_bucket(supabase_url: str, secret_key: str) -> list[str]:
     claves: list[str] = []
     for idioma in sorted(IDIOMAS):
         offset = 0
+        encontrados_idioma = 0
         while True:
             url = f"{supabase_url}/storage/v1/object/list/{BUCKET}"
             cuerpo = {
@@ -172,6 +173,8 @@ def listar_objetos_bucket(supabase_url: str, secret_key: str) -> list[str]:
                 # Los "placeholder" de carpeta vacía no son imágenes reales.
                 if objeto["name"] != ".emptyFolderPlaceholder":
                     claves.append(f"{idioma}/{objeto['name']}")
+            encontrados_idioma += len(pagina)
+            print(f"  {idioma}: {encontrados_idioma} revisados hasta ahora")
             if len(pagina) < 1000:
                 break
             offset += 1000
