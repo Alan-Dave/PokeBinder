@@ -1,10 +1,15 @@
 """Sube las imágenes del catálogo al bucket privado Images de Supabase Storage.
 
 Descarga el zip publicado en el release "images" del repositorio de GitHub
-(no hace falta tenerlo descargado a mano) y sube cada archivo a su ruta
-<idioma>/<archivo>.webp, con x-upsert para que se pueda correr más de una vez
+(no hace falta tenerlo descargado a mano) y sube cada archivo a
+<idioma>/<id_api>.webp, con x-upsert para que se pueda correr más de una vez
 sin duplicar nada. Después de esto corre ingesta/emparejar_imagenes.py, que es
 quien llena cartas.imagen_path a partir de lo que quedó en el bucket.
+
+Se sube por id_api y no con el nombre original del archivo (que trae el
+nombre de la carta) porque Supabase Storage rechaza rutas con caracteres
+fuera de ASCII (InvalidKey): hay cartas con 'δ' (Delta Species), acentos, o
+el nombre completo en japonés/chino. id_api nunca tiene esos caracteres.
 
 No usa ninguna librería fuera de la estándar: solo urllib, zipfile y
 concurrent.futures. No hace falta instalar nada nuevo.
@@ -33,6 +38,8 @@ import urllib.request
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+
+from emparejar_imagenes import separar_id_api
 
 RELEASE_URL = (
     "https://github.com/Alan-Dave/PokeBinder/releases/download/images/Images.zip"
@@ -79,7 +86,18 @@ def listar_archivos(ruta_zip: str) -> tuple[list[Archivo], list[str]]:
                 ignorados.append(nombre)
                 continue
 
-            archivos.append(Archivo(ruta_bucket=f"{partes[1]}/{partes[2]}", nombre_en_zip=nombre))
+            id_api = separar_id_api(partes[2])
+            if id_api is None:
+                ignorados.append(nombre)
+                continue
+
+            # Se sube como <idioma>/<id_api>.webp, no con el nombre original:
+            # Supabase Storage rechaza rutas con caracteres fuera de ASCII
+            # (InvalidKey), y hay cartas con 'δ' (Delta Species) o nombre
+            # completo en japonés/chino. id_api nunca tiene esos caracteres
+            # (lo valida migrar_catalogo.normalizar_fila), y de todos modos
+            # es lo único que separar_id_api usa para emparejar después.
+            archivos.append(Archivo(ruta_bucket=f"{partes[1]}/{id_api}.webp", nombre_en_zip=nombre))
 
     return archivos, ignorados
 
