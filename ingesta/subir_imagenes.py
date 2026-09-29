@@ -19,16 +19,22 @@ Uso (PowerShell):
     # 1. Revisar qué se subiría, sin tocar el bucket
     python ingesta/subir_imagenes.py --dry-run
 
-    # 2. Probar con pocos archivos antes de subir todo
     $env:SUPABASE_URL = "https://<ref>.supabase.co"
     $env:SUPABASE_SECRET_KEY = "sb_secret_..."
+
+    # 2. Si el bucket ya tiene archivos de una corrida anterior con otro
+    #    esquema de nombres, hay que vaciarlo primero (termina ahí, no sube).
+    python ingesta/subir_imagenes.py --limpiar
+
+    # 3. Probar con pocos archivos antes de subir todo
     python ingesta/subir_imagenes.py --limit 20
 
-    # 3. Subir todo
+    # 4. Subir todo
     python ingesta/subir_imagenes.py
 """
 
 import argparse
+import json
 import os
 import sys
 import tempfile
@@ -47,6 +53,7 @@ RELEASE_URL = (
 BUCKET = "Images"
 IDIOMAS = {"en", "es", "fr", "pt", "ja", "zh"}
 CONTENT_TYPE = "image/webp"  # único tipo permitido por el bucket
+LOTE_BORRADO = 500  # objetos por llamada al borrar; la API no documenta un máximo
 
 
 @dataclass(frozen=True)
@@ -131,6 +138,54 @@ def subir_archivo(
         return archivo, str(error.reason)
 
 
+def peticion_json(url: str, secret_key: str, cuerpo: dict, metodo: str) -> object:
+    datos = json.dumps(cuerpo).encode()
+    peticion = urllib.request.Request(
+        url,
+        data=datos,
+        method=metodo,
+        headers={
+            "Authorization": f"Bearer {secret_key}",
+            "apikey": secret_key,
+            "Content-Type": "application/json",
+        },
+    )
+    with urllib.request.urlopen(peticion, timeout=30) as resp:
+        return json.loads(resp.read())
+
+
+def listar_objetos_bucket(supabase_url: str, secret_key: str) -> list[str]:
+    """Todas las rutas (<idioma>/<archivo>) que hoy existen en el bucket."""
+    claves: list[str] = []
+    for idioma in sorted(IDIOMAS):
+        offset = 0
+        while True:
+            url = f"{supabase_url}/storage/v1/object/list/{BUCKET}"
+            cuerpo = {
+                "prefix": f"{idioma}/",
+                "limit": 1000,
+                "offset": offset,
+                "sortBy": {"column": "name", "order": "asc"},
+            }
+            pagina = peticion_json(url, secret_key, cuerpo, "POST")
+            for objeto in pagina:
+                # Los "placeholder" de carpeta vacía no son imágenes reales.
+                if objeto["name"] != ".emptyFolderPlaceholder":
+                    claves.append(f"{idioma}/{objeto['name']}")
+            if len(pagina) < 1000:
+                break
+            offset += 1000
+    return claves
+
+
+def borrar_objetos(supabase_url: str, secret_key: str, claves: list[str]) -> None:
+    url = f"{supabase_url}/storage/v1/object/{BUCKET}"
+    for i in range(0, len(claves), LOTE_BORRADO):
+        lote = claves[i : i + LOTE_BORRADO]
+        peticion_json(url, secret_key, {"prefixes": lote}, "DELETE")
+        print(f"  borrados {min(i + LOTE_BORRADO, len(claves))}/{len(claves)}")
+
+
 def subir_todos(
     ruta_zip: str, archivos: list[Archivo], supabase_url: str, secret_key: str, workers: int
 ) -> list[tuple[Archivo, str]]:
@@ -157,7 +212,30 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true", help="solo reporta, no descarga ni sube")
     parser.add_argument("--limit", type=int, help="sube como máximo N archivos (para probar)")
     parser.add_argument("--workers", type=int, default=16, help="subidas en paralelo (default 16)")
+    parser.add_argument(
+        "--limpiar",
+        action="store_true",
+        help="borra todo el contenido del bucket y termina, sin subir nada",
+    )
     args = parser.parse_args()
+
+    if args.limpiar:
+        supabase_url = os.environ.get("SUPABASE_URL")
+        secret_key = os.environ.get("SUPABASE_SECRET_KEY")
+        if not supabase_url or not secret_key:
+            print(
+                "Faltan las variables de entorno SUPABASE_URL y/o SUPABASE_SECRET_KEY.",
+                file=sys.stderr,
+            )
+            return 1
+        print("Listando lo que hay en el bucket...")
+        claves = listar_objetos_bucket(supabase_url, secret_key)
+        print(f"Objetos a borrar: {len(claves)}")
+        if not claves:
+            return 0
+        borrar_objetos(supabase_url, secret_key, claves)
+        print("Bucket vacío. Corre el script de nuevo sin --limpiar para subir las imágenes.")
+        return 0
 
     with tempfile.TemporaryDirectory() as tmp:
         ruta_zip = os.path.join(tmp, "Images.zip")

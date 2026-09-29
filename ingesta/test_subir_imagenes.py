@@ -4,8 +4,9 @@ import os
 import tempfile
 import unittest
 import zipfile
+from unittest.mock import patch
 
-from subir_imagenes import listar_archivos
+from subir_imagenes import IDIOMAS, borrar_objetos, listar_archivos, listar_objetos_bucket
 
 
 def crear_zip(ruta: str, nombres: list[str]) -> None:
@@ -88,6 +89,46 @@ class ListarArchivos(unittest.TestCase):
             archivos, ignorados = listar_archivos(ruta)
             self.assertEqual(archivos, [])
             self.assertEqual(len(ignorados), 2)
+
+
+class ListarObjetosBucket(unittest.TestCase):
+    def test_pagina_hasta_agotar_y_filtra_el_placeholder(self):
+        # "en" trae dos páginas (1000 + 1 => sigue pidiendo), el resto vacío.
+        pagina_1 = [{"name": f"x{i}.webp"} for i in range(1000)]
+        pagina_2 = [{"name": "x1000.webp"}, {"name": ".emptyFolderPlaceholder"}]
+
+        def falso(url, secret_key, cuerpo, metodo):
+            if cuerpo["prefix"] != "en/":
+                return []
+            return pagina_1 if cuerpo["offset"] == 0 else pagina_2
+
+        with patch("subir_imagenes.peticion_json", side_effect=falso) as mock:
+            claves = listar_objetos_bucket("https://x.supabase.co", "clave")
+
+        self.assertEqual(len(claves), 1001)  # sin el placeholder
+        self.assertIn("en/x0.webp", claves)
+        self.assertIn("en/x1000.webp", claves)
+        self.assertNotIn("en/.emptyFolderPlaceholder", claves)
+        # Una llamada por idioma sin archivos + dos para "en" (paginado).
+        self.assertEqual(mock.call_count, len(IDIOMAS) - 1 + 2)
+
+
+class BorrarObjetos(unittest.TestCase):
+    def test_agrupa_en_lotes_de_a_lo_mas_500(self):
+        claves = [f"en/{i}.webp" for i in range(1201)]
+
+        with patch("subir_imagenes.peticion_json") as mock:
+            borrar_objetos("https://x.supabase.co", "clave", claves)
+
+        self.assertEqual(mock.call_count, 3)  # 500 + 500 + 201
+        tamaños = [len(llamada.args[2]["prefixes"]) for llamada in mock.call_args_list]
+        self.assertEqual(tamaños, [500, 500, 201])
+        self.assertEqual(mock.call_args_list[0].args[3], "DELETE")
+
+    def test_no_llama_a_nada_si_no_hay_claves(self):
+        with patch("subir_imagenes.peticion_json") as mock:
+            borrar_objetos("https://x.supabase.co", "clave", [])
+        mock.assert_not_called()
 
 
 if __name__ == "__main__":
