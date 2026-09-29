@@ -44,3 +44,28 @@ export function parsePublicEnv(source: Record<string, string | undefined>): Publ
   }
   return resultado.data;
 }
+
+// Lo opuesto de publicEnvSchema: esta clave SOLO debe llegar al servidor.
+// Se exige que sea una clave secreta de verdad, no solo "no publicable", para
+// detectar si por error se pegó la clave anónima en esta variable.
+export const serverEnvSchema = z.object({
+  SUPABASE_SECRET_KEY: z
+    .string({ error: "Falta SUPABASE_SECRET_KEY." })
+    .min(1, "Falta SUPABASE_SECRET_KEY.")
+    .refine(esClaveSecreta, {
+      message:
+        "SUPABASE_SECRET_KEY no es una clave secreta (sb_secret_... o service_role). " +
+        "Cópiala de Project Settings -> API Keys, no la publicable.",
+    }),
+});
+
+export type ServerEnv = z.infer<typeof serverEnvSchema>;
+
+export function parseServerEnv(source: Record<string, string | undefined>): ServerEnv {
+  const resultado = serverEnvSchema.safeParse(source);
+  if (!resultado.success) {
+    const detalle = resultado.error.issues.map((issue) => `- ${issue.message}`).join("\n");
+    throw new Error(`Variables de entorno inválidas:\n${detalle}`);
+  }
+  return resultado.data;
+}
