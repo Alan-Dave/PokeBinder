@@ -24,16 +24,19 @@ Uso (PowerShell):
 
     # 2. Si el bucket ya tiene archivos de una corrida anterior con otro
     #    esquema de nombres, hay que vaciarlo primero (termina ahí, no sube).
+    #    Pide confirmación; --yes la omite.
     python ingesta/subir_imagenes.py --limpiar
 
     # 3. Probar con pocos archivos antes de subir todo
     python ingesta/subir_imagenes.py --limit 20
 
-    # 4. Subir todo
-    python ingesta/subir_imagenes.py
+    # 4. Subir todo. Cada corrida imprime el SHA-256 del zip; para verificar
+    #    que no cambió, pásalo con --sha256 o IMAGES_ZIP_SHA256.
+    python ingesta/subir_imagenes.py --sha256 <hash>
 """
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -62,16 +65,66 @@ class Archivo:
     nombre_en_zip: str  # "images/en/abomasnow_bw10-26.webp"
 
 
-def descargar_zip(destino: str) -> None:
+def descargar_zip(destino: str) -> str:
+    """Descarga el zip y devuelve su SHA-256 en hexadecimal."""
     print(f"Descargando {RELEASE_URL} ...")
     total = 0
+    hash_zip = hashlib.sha256()
     with urllib.request.urlopen(RELEASE_URL, timeout=60) as resp, open(destino, "wb") as f:
         while chunk := resp.read(1024 * 1024):
             f.write(chunk)
+            hash_zip.update(chunk)
             total += len(chunk)
             if total % (50 * 1024 * 1024) < len(chunk):
                 print(f"  {total / (1024 * 1024):.0f} MB")
     print(f"Descarga completa: {total / (1024 * 1024):.0f} MB")
+    return hash_zip.hexdigest()
+
+
+def hash_coincide(obtenido: str, esperado: str) -> bool:
+    return obtenido.lower() == esperado.strip().lower()
+
+
+def confirmar_limpieza(cantidad: int, sin_preguntar: bool) -> bool:
+    """Pide escribir el nombre del bucket antes de borrar, salvo con --yes."""
+    if sin_preguntar:
+        return True
+    respuesta = input(f"Se borrarán {cantidad} objetos del bucket. Escribe '{BUCKET}' para confirmar: ")
+    return respuesta.strip() == BUCKET
+
+
+def credenciales() -> tuple[str, str] | None:
+    supabase_url = os.environ.get("SUPABASE_URL")
+    secret_key = os.environ.get("SUPABASE_SECRET_KEY")
+    if not supabase_url or not secret_key:
+        print(
+            "Faltan las variables de entorno SUPABASE_URL y/o SUPABASE_SECRET_KEY.",
+            file=sys.stderr,
+        )
+        return None
+    return supabase_url, secret_key
+
+
+def limpiar_bucket(supabase_url: str, secret_key: str, sin_preguntar: bool) -> int:
+    try:
+        print("Listando lo que hay en el bucket...")
+        claves = listar_objetos_bucket(supabase_url, secret_key)
+        print(f"Objetos a borrar: {len(claves)}")
+        if not claves:
+            return 0
+        if not confirmar_limpieza(len(claves), sin_preguntar):
+            print("Cancelado, no se borró nada.")
+            return 1
+        borrar_objetos(supabase_url, secret_key, claves)
+    except urllib.error.HTTPError as error:
+        detalle = error.read().decode(errors="replace")[:200]
+        print(f"Supabase respondió HTTP {error.code}: {detalle}", file=sys.stderr)
+        return 1
+    except urllib.error.URLError as error:
+        print(f"No se pudo conectar con Supabase: {error.reason}", file=sys.stderr)
+        return 1
+    print("Bucket vacío. Corre el script de nuevo sin --limpiar para subir las imágenes.")
+    return 0
 
 
 def listar_archivos(ruta_zip: str) -> tuple[list[Archivo], list[str]]:
@@ -220,29 +273,33 @@ def main() -> int:
         action="store_true",
         help="borra todo el contenido del bucket y termina, sin subir nada",
     )
+    parser.add_argument(
+        "--yes", action="store_true", help="con --limpiar, no pide confirmación antes de borrar"
+    )
+    parser.add_argument(
+        "--sha256",
+        default=os.environ.get("IMAGES_ZIP_SHA256"),
+        help="SHA-256 esperado del zip (o variable IMAGES_ZIP_SHA256); si no coincide, aborta",
+    )
     args = parser.parse_args()
 
     if args.limpiar:
-        supabase_url = os.environ.get("SUPABASE_URL")
-        secret_key = os.environ.get("SUPABASE_SECRET_KEY")
-        if not supabase_url or not secret_key:
-            print(
-                "Faltan las variables de entorno SUPABASE_URL y/o SUPABASE_SECRET_KEY.",
-                file=sys.stderr,
-            )
+        claves_acceso = credenciales()
+        if claves_acceso is None:
             return 1
-        print("Listando lo que hay en el bucket...")
-        claves = listar_objetos_bucket(supabase_url, secret_key)
-        print(f"Objetos a borrar: {len(claves)}")
-        if not claves:
-            return 0
-        borrar_objetos(supabase_url, secret_key, claves)
-        print("Bucket vacío. Corre el script de nuevo sin --limpiar para subir las imágenes.")
-        return 0
+        return limpiar_bucket(*claves_acceso, sin_preguntar=args.yes)
 
     with tempfile.TemporaryDirectory() as tmp:
         ruta_zip = os.path.join(tmp, "Images.zip")
-        descargar_zip(ruta_zip)
+        hash_obtenido = descargar_zip(ruta_zip)
+        print(f"SHA-256 del zip: {hash_obtenido}")
+        if args.sha256:
+            if not hash_coincide(hash_obtenido, args.sha256):
+                print("El SHA-256 del zip no coincide con el esperado. No se sube nada.", file=sys.stderr)
+                return 1
+            print("SHA-256 verificado.")
+        else:
+            print("Aviso: no se indicó --sha256, la integridad del zip no se verificó.")
 
         archivos, ignorados = listar_archivos(ruta_zip)
         print(f"Archivos a subir: {len(archivos)}")
@@ -257,14 +314,10 @@ def main() -> int:
         if args.dry_run:
             return 0
 
-        supabase_url = os.environ.get("SUPABASE_URL")
-        secret_key = os.environ.get("SUPABASE_SECRET_KEY")
-        if not supabase_url or not secret_key:
-            print(
-                "Faltan las variables de entorno SUPABASE_URL y/o SUPABASE_SECRET_KEY.",
-                file=sys.stderr,
-            )
+        claves_acceso = credenciales()
+        if claves_acceso is None:
             return 1
+        supabase_url, secret_key = claves_acceso
 
         fallos = subir_todos(ruta_zip, archivos, supabase_url, secret_key, args.workers)
 
