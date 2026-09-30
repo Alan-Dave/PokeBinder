@@ -50,13 +50,16 @@ class ListarArchivos(unittest.TestCase):
             self.assertEqual(rutas, {"en/ex13-35.webp", "en/swsh9-133.webp", "ja/svk-001.webp"})
             self.assertEqual(ignorados, [])
 
-    def test_sin_guion_bajo_no_se_puede_separar_el_id_api(self):
+    def test_sin_guion_bajo_en_el_zip_tambien_se_acepta(self):
+        # No pasa con los datos reales (el zip siempre trae <nombre>_<id_api>),
+        # pero si pasara, el archivo ya sería su propio id_api.
         with tempfile.TemporaryDirectory() as tmp:
             ruta = os.path.join(tmp, "z.zip")
             crear_zip(ruta, ["images/en/bw10-26.webp"])  # sin nombre ni "_"
             archivos, ignorados = listar_archivos(ruta)
-            self.assertEqual(archivos, [])
-            self.assertEqual(ignorados, ["images/en/bw10-26.webp"])
+            self.assertEqual(len(archivos), 1)
+            self.assertEqual(archivos[0].ruta_bucket, "en/bw10-26.webp")
+            self.assertEqual(ignorados, [])
 
     def test_ignora_las_carpetas(self):
         with tempfile.TemporaryDirectory() as tmp:

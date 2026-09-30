@@ -27,8 +27,9 @@ class SepararIdApi(unittest.TestCase):
     def test_id_api_con_varios_guiones_medios(self):
         self.assertEqual(separar_id_api("energia_agua_tk-xy-su-1.webp"), "tk-xy-su-1")
 
-    def test_sin_guion_bajo_no_se_puede_separar(self):
-        self.assertIsNone(separar_id_api("bw10-26.webp"))
+    def test_sin_guion_bajo_el_nombre_completo_ya_es_el_id_api(self):
+        # Así sube subir_imagenes.py: sin nombre descriptivo.
+        self.assertEqual(separar_id_api("bw10-26.webp"), "bw10-26")
 
     def test_extension_distinta_se_ignora(self):
         self.assertIsNone(separar_id_api("abomasnow_bw10-26.png"))
@@ -60,6 +61,12 @@ class Emparejar(unittest.TestCase):
     def test_guion_bajo_doble_igual_se_empareja(self):
         emparejados, sin_emparejar = emparejar(["fr/absol__pl3-1.webp"], CARTAS)
         self.assertEqual(emparejados, [Emparejado(carta_id=2, path="fr/absol__pl3-1.webp")])
+        self.assertEqual(sin_emparejar, [])
+
+    def test_sin_nombre_descriptivo_igual_se_empareja(self):
+        # Forma real que deja subir_imagenes.py en el bucket.
+        emparejados, sin_emparejar = emparejar(["en/bw10-26.webp"], CARTAS)
+        self.assertEqual(emparejados, [Emparejado(carta_id=1, path="en/bw10-26.webp")])
         self.assertEqual(sin_emparejar, [])
 
 
