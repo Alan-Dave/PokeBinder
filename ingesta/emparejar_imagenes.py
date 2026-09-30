@@ -45,12 +45,17 @@ def separar_id_api(nombre_archivo: str) -> str | None:
     id_api nunca lleva guion bajo, así que no importa cuántos traiga el resto
     del nombre (por espacios o por una carta con nombre repetido): el id_api
     es siempre lo que queda después del último guion bajo.
+
+    subir_imagenes.py sube directo como '<id_api>.webp', sin nombre
+    descriptivo (Supabase Storage rechaza rutas con caracteres fuera de
+    ASCII, y el nombre no hacía falta para nada más que esto). Por eso, si no
+    hay guion bajo, no es un error: el nombre completo ya es el id_api.
     """
     if not nombre_archivo.endswith(".webp"):
         return None
     sin_extension = nombre_archivo[: -len(".webp")]
     if "_" not in sin_extension:
-        return None
+        return sin_extension
     return sin_extension.rsplit("_", 1)[1]
 
 
