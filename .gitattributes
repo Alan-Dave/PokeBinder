@@ -1,0 +1,10 @@
+# Saltos de línea LF en el repositorio para todos los integrantes,
+# sin importar el sistema operativo. Evita diffs llenos de cambios invisibles.
+* text=auto eol=lf
+
+# Binarios: git no debe tocarlos.
+*.ico binary
+*.png binary
+*.jpg binary
+*.webp binary
+*.db binary
