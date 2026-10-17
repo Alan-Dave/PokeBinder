@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AgregarAlInventario from "@/components/AgregarAlInventario";
+import VisorImagen from "@/components/VisorImagen";
 import { obtenerCarta, urlsImagenesOpcionales } from "@/lib/catalogo";
 import { idDesdeRuta } from "@/lib/validators/catalogo";
 import { CANTIDAD_MAX, CANTIDAD_MIN } from "@/lib/validators/inventario";
@@ -65,10 +66,7 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
         <div className="flex aspect-[5/7] w-full max-w-md items-center justify-center overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-900">
           {url ? (
-            // La URL está firmada y caduca: el optimizador de next/image
-            // no aporta nada y cachearía una URL vencida.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={url} alt={carta.nombre} className="h-full w-full object-contain" />
+            <VisorImagen url={url} alt={carta.nombre} />
           ) : (
             <span className="text-sm text-zinc-500">Sin imagen</span>
           )}
