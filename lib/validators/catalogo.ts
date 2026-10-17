@@ -44,3 +44,13 @@ export function patronPrefijo(texto: string): string {
   const limpio = texto.trim().toLowerCase().replaceAll("*", "");
   return `${limpio.replace(/[\\%_]/g, "\\$&")}%`;
 }
+
+/**
+ * Id de carta tomado de la URL (/catalogo/123). La ruta llega como texto: se
+ * exige que sean solo dígitos antes de convertirlo, porque Number() acepta
+ * cosas como "1e3", "0x10" o " 12 " que no son un id. Hasta 15 dígitos para
+ * quedar dentro del rango entero seguro de JavaScript.
+ */
+export function idDesdeRuta(texto: string): number | null {
+  return /^[1-9]\d{0,14}$/.test(texto) ? Number(texto) : null;
+}

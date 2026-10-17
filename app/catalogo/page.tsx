@@ -1,7 +1,11 @@
 import Link from "next/link";
 import AgregarAlInventario from "@/components/AgregarAlInventario";
-import { buscarCartas, obtenerFiltros, TAMANO_PAGINA_CATALOGO } from "@/lib/catalogo";
-import { obtenerUrlsImagenes } from "@/lib/imagenes";
+import {
+  buscarCartas,
+  obtenerFiltros,
+  TAMANO_PAGINA_CATALOGO,
+  urlsImagenesOpcionales,
+} from "@/lib/catalogo";
 import { IDIOMAS } from "@/lib/validators/catalogo";
 import { CANTIDAD_MAX, CANTIDAD_MIN } from "@/lib/validators/inventario";
 
@@ -68,17 +72,8 @@ export default async function CatalogoPage({ searchParams }: { searchParams: Par
     const { filas, total } = resultado.datos;
     const totalPaginas = Math.max(1, Math.ceil(total / TAMANO_PAGINA_CATALOGO));
 
-    // Las imágenes son un extra: si no se pueden firmar, la página sigue
-    // funcionando con un marcador en lugar de la imagen.
-    let imagenes: Record<number, string | null> = {};
-    if (filas.length > 0) {
-      try {
-        const urls = await obtenerUrlsImagenes({ cartaIds: filas.map((f) => f.id) });
-        if (urls.ok) imagenes = urls.datos;
-      } catch (error) {
-        console.error("[catalogo] No se pudieron firmar las imágenes:", error);
-      }
-    }
+    // Las imágenes son un extra: sin ellas la página se muestra con un marcador.
+    const imagenes = await urlsImagenesOpcionales(filas.map((f) => f.id));
 
     contenido =
       filas.length === 0 ? (
@@ -114,7 +109,9 @@ export default async function CatalogoPage({ searchParams }: { searchParams: Par
                     )}
                   </div>
                   <div>
-                    <p className="font-medium">{carta.nombre}</p>
+                    <Link href={`/catalogo/${carta.id}`} className="font-medium underline-offset-2 hover:underline">
+                      {carta.nombre}
+                    </Link>
                     <p className="text-sm text-zinc-600 dark:text-zinc-400">
                       {carta.set_id} · {carta.number} · {carta.idioma}
                     </p>
