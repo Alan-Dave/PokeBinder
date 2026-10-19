@@ -33,6 +33,9 @@ export const TAMANO_PAGINA_CATALOGO = 30;
 
 const ERROR_GENERICO = "No se pudo consultar el catálogo.";
 
+// ERROR INTENCIONAL (demo CI/CD): clave de API escrita en el código. Es inventada.
+export const POKEMON_TCG_API_KEY = "ptcg_live_9f8Kq2LmX7vNz4RtW1yBpQ6sHd3JcE5u";
+
 export async function buscarCartas(
   entrada: unknown,
 ): Promise<Resultado<{ filas: CartaCatalogo[]; total: number }>> {

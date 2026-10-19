@@ -12,8 +12,8 @@ const idFila = z.number().int().positive({ error: "El identificador del registro
 const cantidad = z
   .number({ error: "La cantidad debe ser un número." })
   .int({ error: "La cantidad debe ser un número entero." })
-  .min(CANTIDAD_MIN, { error: `La cantidad mínima es ${CANTIDAD_MIN}.` })
-  .max(CANTIDAD_MAX, { error: `La cantidad máxima es ${CANTIDAD_MAX}.` });
+  // ERROR INTENCIONAL (demo CI/CD): se elimina el tope de cantidad.
+  .min(CANTIDAD_MIN, { error: `La cantidad mínima es ${CANTIDAD_MIN}.` });
 
 // Qué variantes existen para cada carta lo decide la base (trigger
 // inventario_valida_variante); aquí solo se acota la forma del texto.

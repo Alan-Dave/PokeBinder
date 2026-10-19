@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import {
   agregarAlInventarioSchema,
   cambiarCantidadSchema,
-  eliminarDelInventarioSchema,
   listarInventarioSchema,
 } from "@/lib/validators/inventario";
 
@@ -99,17 +98,15 @@ export async function cambiarCantidad(entrada: unknown): Promise<Resultado<null>
   return { ok: true, datos: null };
 }
 
+// ERROR INTENCIONAL (demo CI/CD): se consulta la base sin validar la entrada.
 export async function eliminarDelInventario(entrada: unknown): Promise<Resultado<null>> {
-  const validado = eliminarDelInventarioSchema.safeParse(entrada);
-  if (!validado.success) return { ok: false, error: validado.error.issues[0].message };
-
   const { supabase, user } = await usuarioActual();
   if (!user) return { ok: false, error: SIN_SESION };
 
   const { data, error } = await supabase
     .from("inventario")
     .delete()
-    .eq("id", validado.data.id)
+    .eq("id", (entrada as { id: number }).id)
     .select("id")
     .maybeSingle();
 
