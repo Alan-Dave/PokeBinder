@@ -1,15 +1,23 @@
-# Pipeline de integración continua de PokeBinder.
+# Pipeline CI/CD de PokeBinder.
 #
 # Valida cada Pull Request hacia develop o main y cada push a esas ramas.
 # Si cualquier paso falla, el pipeline queda en rojo y el PR no debe fusionarse.
 #
-# Orden: primero lo más barato y lo más grave (secretos), al final la compilación.
+# Etapas:
+#   1. CI      Cinco jobs en paralelo; todos deben pasar.
+#              Secretos · Dependencias · Análisis estático · SAST · Pruebas
+#   2. Build   Compila la aplicación y publica un artefacto inmutable.
+#              Solo corre si CI terminó en verde.
+#   3. Deploy  Publica el artefacto en Azure App Service. Solo desde main
+#              (código de producción, ver CONTRIBUTING.md) y solo si Build pasó.
+#              Desactivada hasta configurar Azure: ver enableDeploy abajo.
 #
 # Variables requeridas en Azure DevOps (Pipelines -> Edit -> Variables),
 # ninguna secreta:
 #   NEXT_PUBLIC_SUPABASE_URL
 #   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-# La clave secreta de Supabase no se usa aquí.
+# La clave secreta de Supabase no se usa aquí: en producción vive en la
+# configuración del App Service, nunca en el pipeline.
 
 trigger:
   branches:
@@ -29,74 +37,225 @@ pool:
 variables:
   GITLEAKS_VERSION: 8.24.0
   PIP_AUDIT_VERSION: 2.7.3
+  SEMGREP_VERSION: 1.181.0
   NEXT_TELEMETRY_DISABLED: 1
+  npm_config_cache: $(Pipeline.Workspace)/.npm
+  # Despliegue. Se evalúa al compilar el pipeline: con 'false' la etapa Deploy
+  # ni siquiera existe, así el pipeline no exige una Service Connection que
+  # todavía no se ha creado. Pasos para activarla en docs/cicd.md.
+  enableDeploy: 'false'
+  azureServiceConnection: 'pokebinder-azure'
+  webAppName: 'pokebinder'
 
-steps:
-  # Historial completo: gitleaks revisa todos los commits, no solo el último.
-  # Un secreto borrado en un commit posterior sigue expuesto en el historial.
-  - checkout: self
-    fetchDepth: 0
-    displayName: Obtener el código
+stages:
+  - stage: CI
+    displayName: 'CI: seguridad y calidad'
+    jobs:
+      # 1. Escaneo de secretos.
+      - job: Secretos
+        displayName: 'Secretos (gitleaks)'
+        steps:
+          # Historial completo: gitleaks revisa todos los commits, no solo el último.
+          # Un secreto borrado en un commit posterior sigue expuesto en el historial.
+          - checkout: self
+            fetchDepth: 0
+            displayName: Obtener el código
 
-  # Debe coincidir con "engines" de package.json: .npmrc tiene engine-strict
-  # y npm se niega a instalar con otra versión.
-  - task: NodeTool@0
-    inputs:
-      versionSpec: 22.x
-    displayName: Usar Node.js 22
+          # Se verifica la suma SHA-256 del binario antes de ejecutarlo.
+          # --redact evita que un secreto encontrado quede impreso en el log.
+          - script: |
+              set -euo pipefail
+              base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+              archivo="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+              curl -sSfL -o "$archivo" "$base/$archivo"
+              curl -sSfL -o checksums.txt "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+              grep " $archivo\$" checksums.txt | sha256sum --check --strict
+              tar -xzf "$archivo" gitleaks
+              ./gitleaks git --redact --verbose .
+            displayName: Escanear secretos (gitleaks)
 
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '3.11'
-    displayName: Usar Python 3.11
+      # 2. Dependencias vulnerables.
+      - job: Dependencias
+        displayName: 'Dependencias (npm audit, pip-audit)'
+        steps:
+          - template: .azure/pasos-node.yml
 
-  # 1. Escaneo de secretos.
-  # Se verifica la suma SHA-256 del binario antes de ejecutarlo.
-  # --redact evita que un secreto encontrado quede impreso en el log.
-  - script: |
-      set -euo pipefail
-      base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
-      archivo="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-      curl -sSfL -o "$archivo" "$base/$archivo"
-      curl -sSfL -o checksums.txt "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
-      grep " $archivo\$" checksums.txt | sha256sum --check --strict
-      tar -xzf "$archivo" gitleaks
-      ./gitleaks git --redact --verbose .
-    displayName: Escanear secretos (gitleaks)
+          # Falla ante severidad alta o crítica.
+          # --omit=dev: solo se auditan las dependencias que llegan a producción.
+          # Riesgo aceptado y documentado en docs/seguridad.md: braces (cadena de
+          # eslint-config-next, solo desarrollo) no tiene versión corregida en npm.
+          # Cuando la tenga, volver a "npm audit --audit-level=high" sin --omit=dev.
+          - script: npm audit --omit=dev --audit-level=high
+            displayName: Revisar dependencias npm (npm audit)
 
-  # 2. Instalación con las versiones exactas del package-lock.json.
-  - script: npm ci
-    displayName: Instalar dependencias (npm ci)
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.11'
+            displayName: Usar Python 3.11
 
-  # 3. Dependencias vulnerables. Falla ante severidad alta o crítica.
-  # --omit=dev: solo se auditan las dependencias que llegan a producción.
-  # Riesgo aceptado y documentado en docs/seguridad.md: braces (cadena de
-  # eslint-config-next, solo desarrollo) no tiene versión corregida en npm.
-  # Cuando la tenga, volver a "npm audit --audit-level=high" sin --omit=dev.
-  - script: npm audit --omit=dev --audit-level=high
-    displayName: Revisar dependencias npm (npm audit)
+          - script: |
+              set -euo pipefail
+              python -m pip install --quiet "pip-audit==${PIP_AUDIT_VERSION}"
+              pip-audit --requirement ingesta/requirements.txt
+            displayName: Revisar dependencias Python (pip-audit)
 
-  - script: |
-      set -euo pipefail
-      python -m pip install --quiet "pip-audit==${PIP_AUDIT_VERSION}"
-      pip-audit --requirement ingesta/requirements.txt
-    displayName: Revisar dependencias Python (pip-audit)
+      # 3. Análisis estático de estilo y errores. El script ya exige cero advertencias.
+      - job: Lint
+        displayName: 'Análisis estático (ESLint)'
+        steps:
+          - template: .azure/pasos-node.yml
+          - script: npm run lint
+            displayName: Análisis estático (ESLint)
 
-  # 4. Análisis estático. El script ya exige cero advertencias.
-  - script: npm run lint
-    displayName: Análisis estático (ESLint)
+      # 4. Análisis estático de seguridad (SAST).
+      - job: SAST
+        displayName: 'SAST (Semgrep)'
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.12'
+            displayName: Usar Python 3.12
 
-  # 5. Pruebas.
-  - script: npm run test
-    displayName: Pruebas de la aplicación (Vitest)
+          # Reglas propias (.semgrep/pokebinder.yml): convierten en verificación
+          # automática las reglas de arquitectura de docs/seguridad.md (validar
+          # con zod antes de consultar, Supabase solo desde lib/, cliente admin
+          # acotado, nada de HTML sin escapar). Los rulesets públicos cubren
+          # OWASP Top 10 y patrones conocidos de TypeScript, React y Next.js.
+          # --error: cualquier hallazgo deja el job en rojo.
+          - script: |
+              set -euo pipefail
+              python -m pip install --quiet "semgrep==${SEMGREP_VERSION}"
+              mkdir -p reportes
+              semgrep scan \
+                --config .semgrep/ \
+                --config p/typescript \
+                --config p/react \
+                --config p/nextjs \
+                --config p/owasp-top-ten \
+                --metrics=off \
+                --error \
+                --exclude node_modules \
+                --sarif-output reportes/semgrep.sarif \
+                --text
+            displayName: Escanear código (Semgrep)
 
-  - script: python -m unittest discover ingesta
-    displayName: Pruebas de la ingesta (unittest)
+          - task: PublishBuildArtifacts@1
+            condition: succeededOrFailed()
+            inputs:
+              PathtoPublish: reportes/semgrep.sarif
+              ArtifactName: CodeAnalysisLogs
+            displayName: Publicar reporte SARIF
 
-  # 6. Compilación. Falla ante errores de TypeScript y valida las variables
-  # de entorno con el mismo esquema zod que usa la aplicación.
-  - script: npm run build
-    displayName: Compilar (next build)
-    env:
-      NEXT_PUBLIC_SUPABASE_URL: $(NEXT_PUBLIC_SUPABASE_URL)
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: $(NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
+      # 5. Pruebas.
+      - job: Pruebas
+        displayName: 'Pruebas (Vitest, unittest)'
+        steps:
+          - template: .azure/pasos-node.yml
+
+          # Falla si una prueba falla o si la cobertura baja de los umbrales
+          # definidos en vitest.config.mts.
+          - script: npm run test:ci
+            displayName: Pruebas de la aplicación (Vitest + cobertura)
+
+          - task: PublishTestResults@2
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: junit-results.xml
+              testRunTitle: PokeBinder - Vitest
+            displayName: Publicar resultados de pruebas
+
+          - task: PublishCodeCoverageResults@2
+            condition: succeededOrFailed()
+            inputs:
+              summaryFileLocation: coverage/cobertura-coverage.xml
+            displayName: Publicar cobertura
+
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.11'
+            displayName: Usar Python 3.11
+
+          - script: python -m unittest discover ingesta
+            displayName: Pruebas de la ingesta (unittest)
+
+  - stage: Build
+    displayName: 'Build'
+    dependsOn: CI
+    jobs:
+      - job: Compilar
+        displayName: 'Compilar y empaquetar'
+        steps:
+          - template: .azure/pasos-node.yml
+
+          # Falla ante errores de TypeScript y valida las variables de entorno
+          # con el mismo esquema zod que usa la aplicación.
+          - script: npm run build
+            displayName: Compilar (next build)
+            env:
+              NEXT_PUBLIC_SUPABASE_URL: $(NEXT_PUBLIC_SUPABASE_URL)
+              NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: $(NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
+
+          # El artefacto lleva solo lo necesario para "next start": la build,
+          # la configuración y las dependencias de producción. Sin código de
+          # pruebas, scripts de ingesta ni historial git.
+          - script: |
+              set -euo pipefail
+              npm prune --omit=dev
+              mkdir -p dist
+              cp -r .next node_modules package.json package-lock.json next.config.ts .npmrc dist/
+              rm -rf dist/.next/cache
+            displayName: Preparar artefacto de producción
+
+          - task: ArchiveFiles@2
+            inputs:
+              rootFolderOrFile: dist
+              includeRootFolder: false
+              archiveType: zip
+              archiveFile: $(Build.ArtifactStagingDirectory)/pokebinder-$(Build.BuildId).zip
+            displayName: Empaquetar
+
+          - publish: $(Build.ArtifactStagingDirectory)
+            artifact: app
+            displayName: Publicar artefacto
+
+  - ${{ if eq(variables.enableDeploy, 'true') }}:
+      - stage: Deploy
+        displayName: 'Deploy a producción'
+        dependsOn: Build
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'PullRequest'))
+        jobs:
+          # Un deployment job sobre un Environment permite exigir aprobación
+          # manual antes de producción y deja historial de cada despliegue.
+          - deployment: Publicar
+            displayName: 'Azure App Service'
+            environment: pokebinder-prod
+            strategy:
+              runOnce:
+                deploy:
+                  steps:
+                    - task: AzureWebApp@1
+                      inputs:
+                        azureSubscription: $(azureServiceConnection)
+                        appType: webAppLinux
+                        appName: $(webAppName)
+                        package: $(Pipeline.Workspace)/app/pokebinder-$(Build.BuildId).zip
+                        runtimeStack: 'NODE|22-lts'
+                        startUpCommand: npm start
+                      displayName: Desplegar en App Service
+
+                    # Prueba de humo: /estado confirma que la app arrancó y que
+                    # llega a Supabase con la configuración de producción.
+                    - script: |
+                        set -euo pipefail
+                        url="https://$(webAppName).azurewebsites.net/estado"
+                        for intento in 1 2 3 4 5 6; do
+                          if curl -sSf "$url" | grep -q "Base de datos: conectada"; then
+                            echo "La aplicación responde y está conectada a Supabase."
+                            exit 0
+                          fi
+                          sleep 20
+                        done
+                        echo "La aplicación no respondió correctamente en $url" >&2
+                        exit 1
+                      displayName: Prueba de humo (/estado)
