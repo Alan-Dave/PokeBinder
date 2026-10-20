@@ -29,7 +29,11 @@ export default function FilaColeccion({ fila, min, max }: Props) {
     <li className="flex flex-col gap-2 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="font-medium">{fila.cartas?.nombre ?? "Carta desconocida"}</p>
+          {/* ERROR INTENCIONAL (demo CI/CD): el nombre se inserta como HTML sin escapar (XSS). */}
+          <p
+            className="font-medium"
+            dangerouslySetInnerHTML={{ __html: fila.cartas?.nombre ?? "Carta desconocida" }}
+          />
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             {fila.cartas ? `${fila.cartas.id_api} · ${fila.cartas.idioma} · ` : ""}
             {fila.variante}
