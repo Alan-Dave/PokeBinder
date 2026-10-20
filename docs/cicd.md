@@ -18,6 +18,7 @@ en el navegador, Server Action, validación con zod, consulta a Supabase y RLS.
 | F5 | Sesión obligatoria | Sin sesión → `Se requiere una sesión iniciada.` y ninguna consulta | `lib/inventario.test.ts` |
 | F6 | Errores sin filtrar detalles | Códigos esperados de Postgres → mensaje en español; cualquier otro → mensaje genérico (el detalle solo va al log del servidor) | `lib/inventario.test.ts` |
 | F7 | Búsqueda en el catálogo | Texto ≤ 50, idioma del catálogo cerrado, comodines de `LIKE` escapados | `lib/validators/catalogo.test.ts` |
+| F8 | Registro, inicio y cierre de sesión | Correo normalizado; contraseña de 12 a 72 caracteres; un `rol` enviado en el formulario se ignora; mismo mensaje si el correo ya existe; el log no lleva correo ni contraseña | `lib/validators/auth.test.ts`, `app/registro/acciones.test.ts`, `app/login/acciones.test.ts`, `app/auth/acciones.test.ts` |
 
 ### Validaciones por capa
 
