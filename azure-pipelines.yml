@@ -63,6 +63,10 @@ stages:
 
           # Se verifica la suma SHA-256 del binario antes de ejecutarlo.
           # --redact evita que un secreto encontrado quede impreso en el log.
+          # --log-opts=HEAD: solo los commits alcanzables desde lo que se
+          # construye (en un PR, el merge con la base). Sin esto gitleaks
+          # revisa todas las ramas que trae el checkout y un secreto en una
+          # rama ajena deja en rojo los builds de todas las demás.
           - script: |
               set -euo pipefail
               base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
@@ -71,7 +75,7 @@ stages:
               curl -sSfL -o checksums.txt "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
               grep " $archivo\$" checksums.txt | sha256sum --check --strict
               tar -xzf "$archivo" gitleaks
-              ./gitleaks git --redact --verbose .
+              ./gitleaks git --redact --verbose --log-opts=HEAD .
             displayName: Escanear secretos (gitleaks)
 
       # 2. Dependencias vulnerables.

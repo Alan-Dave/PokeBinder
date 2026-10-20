@@ -40,7 +40,7 @@ PR o push a develop / main
         │
         ▼
 ┌──────────────────────── CI (jobs en paralelo) ────────────────────────┐
-│ Secretos      gitleaks sobre todo el historial (binario verificado)    │
+│ Secretos      gitleaks sobre el historial de HEAD (binario verificado) │
 │ Dependencias  npm audit (prod, ≥ high) · pip-audit (ingesta)           │
 │ Lint          ESLint, 0 advertencias                                   │
 │ SAST          Semgrep: reglas propias + typescript/react/nextjs/OWASP  │
@@ -58,7 +58,7 @@ PR o push a develop / main
 
 | Job | Herramienta | Falla cuando |
 |---|---|---|
-| Secretos | gitleaks | Hay una credencial en cualquier commit del historial |
+| Secretos | gitleaks | Hay una credencial en cualquier commit del historial de la rama (`--log-opts=HEAD`: un secreto en otra rama no contamina este build) |
 | Dependencias | npm audit, pip-audit | Una dependencia de producción tiene una vulnerabilidad alta o crítica |
 | Lint | ESLint | Hay un error o una advertencia |
 | SAST | Semgrep | Cualquier hallazgo (`--error`) |
