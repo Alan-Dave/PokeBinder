@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { agregarCartaAccion } from "@/app/catalogo/acciones";
 import type { EstadoAccion } from "@/app/coleccion/tipos";
+import { etiquetaVariante, ordenarVariantes } from "@/lib/variantes";
 
 const INICIAL: EstadoAccion = { error: null, exito: false };
 
@@ -35,9 +36,9 @@ export default function AgregarAlInventario({ cartaId, variantes, min, max }: Pr
           name="variante"
           className="rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
         >
-          {variantes.map((variante) => (
+          {ordenarVariantes(variantes).map((variante) => (
             <option key={variante} value={variante}>
-              {variante}
+              {etiquetaVariante(variante)}
             </option>
           ))}
         </select>
