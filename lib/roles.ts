@@ -17,6 +17,9 @@ export type Perfil = {
   nombre_visible: string;
   rol: Rol;
   creado_en: string;
+  // null = cuenta habilitada.
+  deshabilitada_en: string | null;
+  motivo_deshabilitacion: string | null;
 };
 
 export type Resultado<T> = { ok: true; datos: T } | { ok: false; error: string };

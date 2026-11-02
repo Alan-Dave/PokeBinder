@@ -8,8 +8,10 @@ import { parseServerEnv } from "@/lib/validators/env";
  * Cliente de Supabase con la clave secreta (service_role).
  *
  * Se salta RLS por completo, así que su uso se limita a lo que RLS no puede
- * resolver por sí solo: firmar URLs de un bucket privado. No se usa para leer
- * ni escribir tablas — para eso está lib/supabase/server.ts, que respeta RLS.
+ * resolver por sí solo: firmar URLs de un bucket privado (lib/imagenes.ts) y
+ * bloquear o desbloquear una cuenta en Supabase Auth (lib/cuentas.ts, después
+ * de que la base autorizó al administrador). No se usa para leer ni escribir
+ * tablas — para eso está lib/supabase/server.ts, que respeta RLS.
  *
  * `server-only` hace fallar la build si algún componente de navegador la
  * importa por error.

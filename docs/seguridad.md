@@ -29,7 +29,7 @@ distinción, para el estado actual del proyecto (PBI-03, 04, 07 y 08).
 
 | Dato | Dónde vive | Nivel | Resguardo actual |
 |---|---|---|---|
-| `SUPABASE_SECRET_KEY` | Variable de entorno del servidor | Secreto técnico | Nunca en `NEXT_PUBLIC_*`; `parseServerEnv` ([env.ts](../lib/validators/env.ts)) rechaza el arranque si no es una clave secreta real. Solo la usa [`admin.ts`](../lib/supabase/admin.ts), y solo para firmar URLs de Storage — nunca para leer tablas. |
+| `SUPABASE_SECRET_KEY` | Variable de entorno del servidor | Secreto técnico | Nunca en `NEXT_PUBLIC_*`; `parseServerEnv` ([env.ts](../lib/validators/env.ts)) rechaza el arranque si no es una clave secreta real. Solo la usa [`admin.ts`](../lib/supabase/admin.ts), y solo para dos cosas: firmar URLs de Storage ([`imagenes.ts`](../lib/imagenes.ts)) y bloquear o desbloquear una cuenta en Supabase Auth ([`cuentas.ts`](../lib/cuentas.ts)), siempre después de que la base autorizó al administrador. Nunca para leer tablas. |
 | Contraseña de conexión a Postgres (`SUPABASE_DB_URL`) | Variable de entorno de los scripts de `/ingesta` | Secreto técnico | Nunca en el string de conexión ni en el historial de la terminal: los scripts la piden con `getpass`, que no la muestra en pantalla. |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Variable de entorno pública, bundle del navegador | — (no es secreta) | Inofensiva porque RLS limita lo que permite hacer. `esClaveSecreta` impide que alguien pegue ahí la clave secreta por error. |
 | Contraseña de cada usuario | `auth.users`, la gestiona Supabase Auth | Personal | La aplicación nunca la ve ni la guarda: Supabase Auth almacena el hash. Ninguna tabla propia duplica este dato. |
@@ -87,6 +87,29 @@ perfiles con los tres roles viejos (conversión, registro nuevo como `usuario`,
 rechazo a `usuario` y a `anon`, autocambio, sin sesión y auditoría); falta
 repetir la prueba contra el proyecto remoto. En una base nueva no queda ningún
 administrador: el primero se asigna desde la consola de Supabase.
+
+**Cuentas habilitadas (migración `20261103120000_cuentas_habilitadas`):** un
+administrador deshabilita o habilita una cuenta desde `/admin/cuentas` con un
+motivo obligatorio. `cambiar_estado_cuenta` autoriza en la base (administrador
+habilitado, nunca la propia cuenta, nunca el último administrador habilitado)
+y registra el motivo en la bitácora; recién entonces [`cuentas.ts`](../lib/cuentas.ts)
+bloquea la cuenta en Supabase Auth, y si eso falla revierte la base. Como el
+token ya emitido sigue vigente hasta que vence, las políticas de `perfiles`
+(edición), `inventario`, `mazos` y `mazo_cartas` exigen además
+`cuenta_habilitada()`. Un administrador deshabilitado pierde Administración.
+Probado contra un PostgreSQL 16 local; falta repetirlo contra el proyecto
+remoto, igual que la migración de dos perfiles.
+
+Pendientes de este cambio:
+
+- Confirmar si Supabase Auth devuelve `user_banned` antes o después de validar
+  la contraseña. Si es antes, el mensaje "Tu cuenta está deshabilitada" revela
+  que ese correo tiene una cuenta deshabilitada; en ese caso conviene mostrar
+  el mismo mensaje que para credenciales incorrectas.
+- La regla Semgrep `pokebinder-cliente-admin-acotado` (PR de la evaluación
+  CI/CD) solo permite `createAdminClient()` en `lib/imagenes.ts`: hay que
+  agregar `lib/cuentas.ts` a sus excepciones cuando ambos cambios estén en
+  `develop`.
 
 **Pendiente de probar en vivo:** que los triggers de `auditoria` bloqueen
 `update`, `delete` y `truncate` incluso para `service_role` (regla 7). El

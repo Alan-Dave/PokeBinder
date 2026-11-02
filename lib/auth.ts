@@ -21,6 +21,7 @@ export type PerfilActual = { id: string; correo: string | null; nombreVisible: s
 
 const CREDENCIALES_INVALIDAS = "Correo o contraseña incorrectos.";
 const DEMASIADOS_INTENTOS = "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.";
+const CUENTA_DESHABILITADA = "Tu cuenta está deshabilitada. Contacta a un administrador.";
 
 // Códigos de error de Supabase Auth que se traducen a propósito. Cualquier otro
 // es un fallo inesperado: se registra su código (nunca el correo ni la clave)
@@ -66,6 +67,8 @@ export async function iniciarSesion(entrada: unknown): Promise<Resultado<null>> 
 
   if (error) {
     if (error.code === "invalid_credentials") return { ok: false, error: CREDENCIALES_INVALIDAS };
+    // Bloqueo aplicado por Administración (ver lib/cuentas.ts).
+    if (error.code === "user_banned") return { ok: false, error: CUENTA_DESHABILITADA };
     if (error.code === "email_not_confirmed") {
       return { ok: false, error: "Debes confirmar tu correo antes de iniciar sesión." };
     }
