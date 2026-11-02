@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AgregarAlInventario from "@/components/AgregarAlInventario";
+import FormularioPropuesta from "@/components/FormularioPropuesta";
 import VisorImagen from "@/components/VisorImagen";
+import { obtenerPerfilActual } from "@/lib/auth";
 import { obtenerCarta, urlsImagenesOpcionales } from "@/lib/catalogo";
+import { misPropuestas } from "@/lib/propuestas";
 import { idDesdeRuta } from "@/lib/validators/catalogo";
 import { CANTIDAD_MAX, CANTIDAD_MIN } from "@/lib/validators/inventario";
+import { DESCRIPCION_MAX, DETALLES_MAX } from "@/lib/validators/propuestas";
+
+const ESTADO_PROPUESTA = { pendiente: "Pendiente de revisión", aprobada: "Aprobada", rechazada: "Rechazada" };
 
 // Las URLs firmadas de las imágenes caducan: nunca se sirve desde caché.
 export const dynamic = "force-dynamic";
@@ -44,6 +50,9 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
   const carta = resultado.datos;
   const imagenes = await urlsImagenesOpcionales([carta.id]);
   const url = imagenes[carta.id];
+  // Proponer solo tiene sentido en cartas sin imagen y con sesión iniciada.
+  const perfil = carta.tiene_imagen ? null : await obtenerPerfilActual();
+  const propuestas = perfil ? await misPropuestas(carta.id) : [];
 
   // Solo se listan los datos que la carta tiene: una fila vacía no informa nada.
   const datos: [string, string][] = [
@@ -88,6 +97,15 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
             ))}
           </dl>
 
+          {/* React escapa el texto: lo que escribió un usuario nunca se interpreta como HTML. */}
+          {carta.descripcion && <p className="text-sm whitespace-pre-line">{carta.descripcion}</p>}
+          {carta.detalles && (
+            <div className="flex flex-col gap-1">
+              <h2 className="text-lg font-medium">Detalles</h2>
+              <p className="text-sm whitespace-pre-line text-zinc-700 dark:text-zinc-300">{carta.detalles}</p>
+            </div>
+          )}
+
           <div className="flex flex-col gap-2">
             <h2 className="text-lg font-medium">Agregar a mi colección</h2>
             <AgregarAlInventario
@@ -97,6 +115,32 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
               max={CANTIDAD_MAX}
             />
           </div>
+
+          {!carta.tiene_imagen && (
+            <div className="flex flex-col gap-2">
+              <h2 className="text-lg font-medium">Proponer imagen y detalles</h2>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Esta carta no tiene imagen. Un administrador revisa cada propuesta antes de publicarla.
+              </p>
+              {perfil ? (
+                <FormularioPropuesta cartaId={carta.id} descripcionMax={DESCRIPCION_MAX} detallesMax={DETALLES_MAX} />
+              ) : (
+                <Link href="/login" className="text-sm underline">
+                  Inicia sesión para proponer una imagen
+                </Link>
+              )}
+              {propuestas.length > 0 && (
+                <ul className="flex flex-col gap-1 text-sm">
+                  {propuestas.map((p) => (
+                    <li key={p.id}>
+                      Tu propuesta: {ESTADO_PROPUESTA[p.estado]}
+                      {p.motivo_rechazo ? ` · Motivo: ${p.motivo_rechazo}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </main>

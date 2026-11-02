@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { avisoEstadoCuenta } from "./avisos";
+import { avisoEstadoCuenta, avisoPropuesta } from "./avisos";
 
 describe("avisoEstadoCuenta", () => {
   it.each([
@@ -27,5 +27,19 @@ describe("avisoEstadoCuenta", () => {
 
     expect(aviso.html).not.toContain("<a href");
     expect(aviso.html).toContain("&lt;a href=&quot;https://phishing.test&quot;&gt;");
+  });
+});
+
+describe("avisoPropuesta", () => {
+  it("aprobada: sin motivo", () => {
+    const aviso = avisoPropuesta({ aprobada: true, motivo: null });
+    expect(aviso.asunto).toBe("Tu propuesta para el catálogo fue aprobada");
+    expect(aviso.texto).not.toContain("Motivo");
+  });
+
+  it("rechazada: con el motivo escapado en el HTML", () => {
+    const aviso = avisoPropuesta({ aprobada: false, motivo: "<b>borrosa</b>" });
+    expect(aviso.texto).toContain("Motivo: <b>borrosa</b>");
+    expect(aviso.html).toContain("&lt;b&gt;borrosa&lt;/b&gt;");
   });
 });

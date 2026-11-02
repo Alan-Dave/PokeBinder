@@ -29,7 +29,7 @@ distinción, para el estado actual del proyecto (PBI-03, 04, 07 y 08).
 
 | Dato | Dónde vive | Nivel | Resguardo actual |
 |---|---|---|---|
-| `SUPABASE_SECRET_KEY` | Variable de entorno del servidor | Secreto técnico | Nunca en `NEXT_PUBLIC_*`; `parseServerEnv` ([env.ts](../lib/validators/env.ts)) rechaza el arranque si no es una clave secreta real. Solo la usa [`admin.ts`](../lib/supabase/admin.ts), y solo para dos cosas: firmar URLs de Storage ([`imagenes.ts`](../lib/imagenes.ts)) y bloquear o desbloquear una cuenta en Supabase Auth ([`cuentas.ts`](../lib/cuentas.ts)), siempre después de que la base autorizó al administrador. Nunca para leer tablas. |
+| `SUPABASE_SECRET_KEY` | Variable de entorno del servidor | Secreto técnico | Nunca en `NEXT_PUBLIC_*`; `parseServerEnv` ([env.ts](../lib/validators/env.ts)) rechaza el arranque si no es una clave secreta real. Solo la usa [`admin.ts`](../lib/supabase/admin.ts), y solo para tres cosas: firmar URLs de Storage ([`imagenes.ts`](../lib/imagenes.ts)), bloquear o desbloquear una cuenta en Supabase Auth ([`cuentas.ts`](../lib/cuentas.ts)) y mover los archivos de las propuestas de imagen ([`propuestas.ts`](../lib/propuestas.ts)), siempre después de que la base autorizó la acción o, al subir, después de comprobar la sesión. Nunca para leer tablas. |
 | `MAILERSEND_API_KEY` | Variable de entorno del servidor (opcional) | Secreto técnico | Sin `NEXT_PUBLIC_`; solo la lee [`correo.ts`](../lib/correo.ts). Si falta, los avisos por correo quedan desactivados y la app funciona igual; si está a medias con `CORREO_REMITENTE`, la app no arranca. Nunca se registra en el log. |
 | Contraseña de conexión a Postgres (`SUPABASE_DB_URL`) | Variable de entorno de los scripts de `/ingesta` | Secreto técnico | Nunca en el string de conexión ni en el historial de la terminal: los scripts la piden con `getpass`, que no la muestra en pantalla. |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Variable de entorno pública, bundle del navegador | — (no es secreta) | Inofensiva porque RLS limita lo que permite hacer. `esClaveSecreta` impide que alguien pegue ahí la clave secreta por error. |
@@ -109,8 +109,8 @@ Pendientes de este cambio:
   el mismo mensaje que para credenciales incorrectas.
 - La regla Semgrep `pokebinder-cliente-admin-acotado` (PR de la evaluación
   CI/CD) solo permite `createAdminClient()` en `lib/imagenes.ts`: hay que
-  agregar `lib/cuentas.ts` a sus excepciones cuando ambos cambios estén en
-  `develop`.
+  agregar `lib/cuentas.ts` y `lib/propuestas.ts` a sus excepciones cuando
+  estos cambios y ese PR estén en `develop`.
 
 **Avisos por correo (MailerSend):** al habilitar o deshabilitar una cuenta se
 envía un correo a la dirección registrada, con el motivo. La dirección sale de
@@ -129,6 +129,30 @@ Pendientes de este cambio:
   cambia.
 - Listas de supresión: MailerSend no entrega a direcciones suprimidas
   (rebotes, quejas), pero la app no las consulta antes de enviar.
+
+**Propuestas de imagen (migración `20261104120000_propuestas_carta`):** un
+usuario propone imagen, descripción y detalles para una carta **sin imagen**;
+nada se publica hasta que un administrador aprueba. Controles sobre el archivo,
+en el servidor ([`imagen-propuesta.ts`](../lib/imagen-propuesta.ts)):
+
+- Formato decidido por los primeros bytes (JPEG, PNG o WebP), no por la
+  extensión ni el tipo MIME. SVG y GIF se rechazan.
+- Hasta 2 MB de entrada (`serverActions.bodySizeLimit` en `next.config.ts`
+  sube a 3 MB para admitirlo) y un tope de píxeles contra bombas de
+  descompresión.
+- Siempre se recodifica a WebP de 734 × 1024 como máximo con `sharp`, que
+  descarta los metadatos (EXIF, ubicación GPS).
+- Nombre generado en el servidor (`uuid.webp`); la tabla además lo valida con
+  una expresión regular, así que no hay rutas como `../`.
+
+El bucket `Propuestas` es privado y sin políticas, como `Images`. Crear,
+aprobar y rechazar pasan por funciones `security definer`; la API no puede
+insertar ni modificar `propuestas_carta` ni `cartas_detalle`. Cada usuario ve
+solo sus propuestas; un máximo de 5 pendientes por usuario. Al aprobar, las
+demás propuestas de la misma carta se rechazan solas. Descripción y detalles
+se muestran como texto (React escapa), y el motivo entra escapado al correo.
+Probado contra un PostgreSQL 16 local; falta repetirlo contra el proyecto
+remoto, igual que las migraciones anteriores.
 
 **Pendiente de probar en vivo:** que los triggers de `auditoria` bloqueen
 `update`, `delete` y `truncate` incluso para `service_role` (regla 7). El

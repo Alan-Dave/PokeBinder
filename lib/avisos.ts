@@ -24,3 +24,20 @@ export function avisoEstadoCuenta({ habilitada, motivo }: { habilitada: boolean;
       `<p>Este es un mensaje automático de PokeBinder.</p>`,
   };
 }
+
+export function avisoPropuesta({ aprobada, motivo }: { aprobada: boolean; motivo: string | null }): Aviso {
+  const asunto = aprobada ? "Tu propuesta para el catálogo fue aprobada" : "Tu propuesta para el catálogo fue rechazada";
+  const cuerpo = aprobada
+    ? "Un administrador aprobó tu propuesta de imagen, descripción y detalles. Ya aparece en el catálogo."
+    : "Un administrador revisó tu propuesta de imagen, descripción y detalles y no la publicó.";
+  const conMotivo = !aprobada && motivo;
+
+  return {
+    asunto,
+    texto: `${cuerpo}${conMotivo ? `\n\nMotivo: ${motivo}` : ""}\n\nEste es un mensaje automático de PokeBinder.`,
+    html:
+      `<p>${cuerpo}</p>` +
+      (conMotivo ? `<p><strong>Motivo:</strong> ${escaparHtml(motivo)}</p>` : "") +
+      `<p>Este es un mensaje automático de PokeBinder.</p>`,
+  };
+}

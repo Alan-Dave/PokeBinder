@@ -31,6 +31,11 @@ export type CartaDetalle = CartaCatalogo & {
   subtipos: string[];
   // Nombre del set en el idioma de la carta; null si el origen no lo trae.
   set_nombre: string | null;
+  // Sin imagen, un usuario puede proponer una (ver lib/propuestas.ts).
+  tiene_imagen: boolean;
+  // Publicados por Administración; null si la carta no tiene.
+  descripcion: string | null;
+  detalles: string | null;
 };
 
 export type FiltrosCatalogo = { tipos: string[]; rarezas: string[] };
@@ -85,7 +90,8 @@ export async function obtenerFiltros(): Promise<Resultado<FiltrosCatalogo>> {
   return { ok: true, datos: { tipos, rarezas } };
 }
 
-const DETALLE = "id, id_api, idioma, nombre, type, rarity, number, set_id, variantes_disponibles, stage, subtipos";
+const DETALLE =
+  "id, id_api, idioma, nombre, type, rarity, number, set_id, variantes_disponibles, stage, subtipos, imagen_path";
 
 /** Una carta por su id, o null si no existe. */
 export async function obtenerCarta(cartaId: number): Promise<Resultado<CartaDetalle | null>> {
@@ -111,7 +117,28 @@ export async function obtenerCarta(cartaId: number): Promise<Resultado<CartaDeta
     .eq("idioma", data.idioma)
     .maybeSingle();
 
-  return { ok: true, datos: { ...(data as CartaCatalogo & { stage: string | null; subtipos: string[] }), set_nombre: set?.nombre ?? null } };
+  // Igual que el nombre del set: si no se puede leer, la ficha sale sin él.
+  const { data: detalle } = await supabase
+    .from("cartas_detalle")
+    .select("descripcion, detalles")
+    .eq("carta_id", data.id)
+    .maybeSingle();
+
+  const { imagen_path, ...carta } = data as CartaCatalogo & {
+    stage: string | null;
+    subtipos: string[];
+    imagen_path: string | null;
+  };
+  return {
+    ok: true,
+    datos: {
+      ...carta,
+      set_nombre: set?.nombre ?? null,
+      tiene_imagen: imagen_path !== null,
+      descripcion: detalle?.descripcion ?? null,
+      detalles: detalle?.detalles ?? null,
+    },
+  };
 }
 
 /**

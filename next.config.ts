@@ -17,6 +17,13 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // No anuncia en cada respuesta qué framework usa el servidor.
   poweredByHeader: false,
+  experimental: {
+    serverActions: {
+      // Por defecto 1 MB. Las propuestas de imagen admiten archivos de hasta
+      // 2 MB (ver lib/validators/propuestas.ts) más los campos de texto.
+      bodySizeLimit: "3mb",
+    },
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
