@@ -107,10 +107,8 @@ Pendientes de este cambio:
   la contraseña. Si es antes, el mensaje "Tu cuenta está deshabilitada" revela
   que ese correo tiene una cuenta deshabilitada; en ese caso conviene mostrar
   el mismo mensaje que para credenciales incorrectas.
-- La regla Semgrep `pokebinder-cliente-admin-acotado` (PR de la evaluación
-  CI/CD) solo permite `createAdminClient()` en `lib/imagenes.ts`: hay que
-  agregar `lib/cuentas.ts` a sus excepciones cuando ambos cambios estén en
-  `develop`.
+- La regla Semgrep `pokebinder-cliente-admin-acotado` permite ahora
+  `createAdminClient()` también en `lib/cuentas.ts`, con este mismo motivo.
 
 **Avisos por correo (MailerSend):** al habilitar o deshabilitar una cuenta se
 envía un correo a la dirección registrada, con el motivo. La dirección sale de
