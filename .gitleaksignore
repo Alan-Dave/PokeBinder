@@ -1,0 +1,14 @@
+# Falsos positivos revisados de gitleaks. Cada línea es la huella exacta de UN
+# hallazgo (commit:archivo:regla:línea); no desactiva la regla ni el archivo.
+# Antes de agregar una línea, confirmar que el valor no es una credencial real
+# y dejar el motivo en el comentario.
+
+# Clave publicable inventada para las pruebas del validador de entorno
+# ("sb_publishable_abc123"). No corresponde a ningún proyecto.
+7f474d3c39b7cfb02cfeeb914c8261ecc8d15361:lib/validators/env.test.ts:generic-api-key:12
+
+# Clave secreta inventada para las pruebas de parseServerEnv (PBI-08),
+# ("sb_secret_xyz"). No corresponde a ningún proyecto. gitleaks revisa todas
+# las ramas del repositorio, así que esta huella hace falta aquí también
+# aunque esta rama no toque env.test.ts.
+c39dd78b770fde21f9445885ff5b5f790319fa62:lib/validators/env.test.ts:generic-api-key:69
