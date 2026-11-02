@@ -30,6 +30,7 @@ distinción, para el estado actual del proyecto (PBI-03, 04, 07 y 08).
 | Dato | Dónde vive | Nivel | Resguardo actual |
 |---|---|---|---|
 | `SUPABASE_SECRET_KEY` | Variable de entorno del servidor | Secreto técnico | Nunca en `NEXT_PUBLIC_*`; `parseServerEnv` ([env.ts](../lib/validators/env.ts)) rechaza el arranque si no es una clave secreta real. Solo la usa [`admin.ts`](../lib/supabase/admin.ts), y solo para dos cosas: firmar URLs de Storage ([`imagenes.ts`](../lib/imagenes.ts)) y bloquear o desbloquear una cuenta en Supabase Auth ([`cuentas.ts`](../lib/cuentas.ts)), siempre después de que la base autorizó al administrador. Nunca para leer tablas. |
+| `MAILERSEND_API_KEY` | Variable de entorno del servidor (opcional) | Secreto técnico | Sin `NEXT_PUBLIC_`; solo la lee [`correo.ts`](../lib/correo.ts). Si falta, los avisos por correo quedan desactivados y la app funciona igual; si está a medias con `CORREO_REMITENTE`, la app no arranca. Nunca se registra en el log. |
 | Contraseña de conexión a Postgres (`SUPABASE_DB_URL`) | Variable de entorno de los scripts de `/ingesta` | Secreto técnico | Nunca en el string de conexión ni en el historial de la terminal: los scripts la piden con `getpass`, que no la muestra en pantalla. |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Variable de entorno pública, bundle del navegador | — (no es secreta) | Inofensiva porque RLS limita lo que permite hacer. `esClaveSecreta` impide que alguien pegue ahí la clave secreta por error. |
 | Contraseña de cada usuario | `auth.users`, la gestiona Supabase Auth | Personal | La aplicación nunca la ve ni la guarda: Supabase Auth almacena el hash. Ninguna tabla propia duplica este dato. |
@@ -110,6 +111,24 @@ Pendientes de este cambio:
   CI/CD) solo permite `createAdminClient()` en `lib/imagenes.ts`: hay que
   agregar `lib/cuentas.ts` a sus excepciones cuando ambos cambios estén en
   `develop`.
+
+**Avisos por correo (MailerSend):** al habilitar o deshabilitar una cuenta se
+envía un correo a la dirección registrada, con el motivo. La dirección sale de
+la respuesta de Supabase Auth al aplicar el bloqueo, sin otra consulta con la
+clave secreta. El motivo entra escapado al HTML del correo, para que nadie
+pueda meter enlaces en un mensaje que sale firmado por el sitio. Si el correo
+no sale, el cambio de estado se mantiene y el administrador ve "No se pudo
+enviar el aviso por correo al usuario". El log registra solo el estado HTTP,
+nunca la dirección ni el contenido. Con el dominio de prueba de MailerSend
+solo llegan correos a la dirección de quien creó la cuenta.
+
+Pendientes de este cambio:
+
+- Reintentar un aviso no enviado: hoy no queda registro de los avisos
+  pendientes; repetir la acción no reenvía el correo porque el estado ya no
+  cambia.
+- Listas de supresión: MailerSend no entrega a direcciones suprimidas
+  (rebotes, quejas), pero la app no las consulta antes de enviar.
 
 **Pendiente de probar en vivo:** que los triggers de `auditoria` bloqueen
 `update`, `delete` y `truncate` incluso para `service_role` (regla 7). El

@@ -89,6 +89,11 @@ export default function FilaCuenta({ perfil, motivoMin, motivoMax }: Props) {
           Estado de la cuenta actualizado.
         </p>
       )}
+      {estado.exito && estado.aviso && (
+        <p role="status" className="text-sm text-amber-800 dark:text-amber-400">
+          {estado.aviso}
+        </p>
+      )}
     </li>
   );
 }

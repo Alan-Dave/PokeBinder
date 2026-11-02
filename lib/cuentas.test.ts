@@ -6,7 +6,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
+vi.mock("@/lib/correo", async (original) => ({
+  ...(await original<typeof import("@/lib/correo")>()),
+  enviarCorreo: vi.fn(),
+}));
 
+import { enviarCorreo } from "@/lib/correo";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { cambiarEstadoCuenta } from "./cuentas";
@@ -16,10 +21,12 @@ const DESHABILITAR = { usuarioId: USUARIO, habilitar: false, motivo: "Abuso del 
 
 type Respuesta = { data?: unknown; error?: { code?: string } | null };
 
+const CORREO = "carla@correo.cl";
+
 function preparar(rpc: Respuesta[], auth: { error: { code?: string } | null } = { error: null }) {
   const base = { rpc: vi.fn() };
   for (const r of rpc) base.rpc.mockResolvedValueOnce({ data: null, error: null, ...r });
-  const admin = { auth: { admin: { updateUserById: vi.fn().mockResolvedValue({ data: null, ...auth }) } } };
+  const admin = { auth: { admin: { updateUserById: vi.fn().mockResolvedValue({ data: { user: { email: CORREO } }, ...auth }) } } };
   vi.mocked(createClient).mockResolvedValue(base as never);
   vi.mocked(createAdminClient).mockReturnValue(admin as never);
   return { base, updateUserById: admin.auth.admin.updateUserById };
@@ -28,6 +35,7 @@ function preparar(rpc: Respuesta[], auth: { error: { code?: string } | null } = 
 beforeEach(() => {
   vi.mocked(createClient).mockReset();
   vi.mocked(createAdminClient).mockReset();
+  vi.mocked(enviarCorreo).mockReset().mockResolvedValue(true);
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -35,7 +43,7 @@ describe("cambiarEstadoCuenta", () => {
   it("deshabilita en la base y luego bloquea en Supabase Auth", async () => {
     const { base, updateUserById } = preparar([{ data: true }]);
 
-    expect(await cambiarEstadoCuenta(DESHABILITAR)).toEqual({ ok: true, datos: null });
+    expect(await cambiarEstadoCuenta(DESHABILITAR)).toEqual({ ok: true, datos: { avisoEnviado: true } });
     expect(base.rpc).toHaveBeenCalledWith("cambiar_estado_cuenta", {
       p_usuario_id: USUARIO,
       p_habilitar: false,
@@ -47,7 +55,10 @@ describe("cambiarEstadoCuenta", () => {
   it("al habilitar quita el bloqueo en Supabase Auth", async () => {
     const { updateUserById } = preparar([{ data: true }]);
 
-    expect(await cambiarEstadoCuenta({ ...DESHABILITAR, habilitar: true })).toEqual({ ok: true, datos: null });
+    expect(await cambiarEstadoCuenta({ ...DESHABILITAR, habilitar: true })).toEqual({
+      ok: true,
+      datos: { avisoEnviado: true },
+    });
     expect(updateUserById).toHaveBeenCalledWith(USUARIO, { ban_duration: "none" });
   });
 
@@ -98,8 +109,9 @@ describe("cambiarEstadoCuenta", () => {
   it("si la cuenta ya estaba así, igual aplica el estado en Auth (repara un desacuerdo)", async () => {
     const { updateUserById } = preparar([{ data: false }]);
 
-    expect(await cambiarEstadoCuenta(DESHABILITAR)).toEqual({ ok: true, datos: null });
+    expect(await cambiarEstadoCuenta(DESHABILITAR)).toEqual({ ok: true, datos: { avisoEnviado: null } });
     expect(updateUserById).toHaveBeenCalled();
+    expect(enviarCorreo).not.toHaveBeenCalled();
   });
 
   it("el log de un fallo de Auth lleva solo el código", async () => {
@@ -110,5 +122,35 @@ describe("cambiarEstadoCuenta", () => {
     const log = vi.mocked(console.error).mock.calls.flat().join(" ");
     expect(log).toContain("user_not_found");
     expect(log).not.toContain("Abuso del sistema");
+  });
+
+  it("avisa por correo a la dirección de la cuenta, con el motivo", async () => {
+    preparar([{ data: true }]);
+
+    await cambiarEstadoCuenta(DESHABILITAR);
+
+    expect(enviarCorreo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        para: CORREO,
+        asunto: "Tu cuenta de PokeBinder fue deshabilitada",
+        texto: expect.stringContaining("Abuso del sistema"),
+      }),
+    );
+  });
+
+  it("si el correo no sale, el cambio se mantiene y lo informa", async () => {
+    const { base } = preparar([{ data: true }]);
+    vi.mocked(enviarCorreo).mockResolvedValue(false);
+
+    expect(await cambiarEstadoCuenta(DESHABILITAR)).toEqual({ ok: true, datos: { avisoEnviado: false } });
+    expect(base.rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it("si Supabase Auth falla, no envía el aviso", async () => {
+    preparar([{ data: true }, { data: true }], { error: { code: "unexpected_failure" } });
+
+    await cambiarEstadoCuenta(DESHABILITAR);
+
+    expect(enviarCorreo).not.toHaveBeenCalled();
   });
 });

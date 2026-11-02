@@ -69,3 +69,27 @@ export function parseServerEnv(source: Record<string, string | undefined>): Serv
   }
   return resultado.data;
 }
+
+// Correo saliente (MailerSend). Opcional: sin estas variables la aplicación
+// funciona igual y los avisos quedan como "no enviados". Si está una, tiene
+// que estar la otra: una configuración a medias es un error, no "desactivado".
+// Ninguna lleva NEXT_PUBLIC_: la clave nunca llega al navegador.
+export const correoEnvSchema = z.object({
+  MAILERSEND_API_KEY: z
+    .string({ error: "Falta MAILERSEND_API_KEY." })
+    .min(1, "Falta MAILERSEND_API_KEY."),
+  CORREO_REMITENTE: z.email({ error: "CORREO_REMITENTE debe ser una dirección de correo válida." }),
+});
+
+export type CorreoEnv = z.infer<typeof correoEnvSchema>;
+
+export function parseCorreoEnv(source: Record<string, string | undefined>): CorreoEnv | null {
+  if (!source.MAILERSEND_API_KEY && !source.CORREO_REMITENTE) return null;
+
+  const resultado = correoEnvSchema.safeParse(source);
+  if (!resultado.success) {
+    const detalle = resultado.error.issues.map((issue) => `- ${issue.message}`).join("\n");
+    throw new Error(`Variables de entorno inválidas:\n${detalle}`);
+  }
+  return resultado.data;
+}

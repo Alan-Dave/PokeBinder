@@ -2,6 +2,8 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { avisoEstadoCuenta } from "@/lib/avisos";
+import { enviarCorreo } from "@/lib/correo";
 import { cambiarEstadoCuentaSchema } from "@/lib/validators/cuentas";
 
 /**
@@ -17,6 +19,10 @@ import { cambiarEstadoCuentaSchema } from "@/lib/validators/cuentas";
  *
  * Si el paso 2 falla, el paso 1 se revierte: la base y Auth nunca quedan en
  * desacuerdo.
+ *
+ * Con los dos pasos hechos se avisa por correo al usuario. Si el correo no
+ * sale, el cambio se mantiene y quien llama recibe avisoEnviado: false
+ * (null: no correspondía avisar porque el estado no cambió).
  */
 
 export type Resultado<T> = { ok: true; datos: T } | { ok: false; error: string };
@@ -41,7 +47,9 @@ function traducirError(codigo: string | undefined, detalle: unknown): string {
   return NO_SE_PUDO;
 }
 
-export async function cambiarEstadoCuenta(entrada: unknown): Promise<Resultado<null>> {
+export async function cambiarEstadoCuenta(
+  entrada: unknown,
+): Promise<Resultado<{ avisoEnviado: boolean | null }>> {
   const validado = cambiarEstadoCuentaSchema.safeParse(entrada);
   if (!validado.success) return { ok: false, error: validado.error.issues[0].message };
   const { usuarioId, habilitar, motivo } = validado.data;
@@ -57,10 +65,19 @@ export async function cambiarEstadoCuenta(entrada: unknown): Promise<Resultado<n
   // Aunque la base ya estuviera en ese estado (cambio === false) se aplica en
   // Auth igual: así un desacuerdo anterior se repara con solo repetir la acción.
   const admin = createAdminClient();
-  const { error: errorAuth } = await admin.auth.admin.updateUserById(usuarioId, {
+  const { data: datosAuth, error: errorAuth } = await admin.auth.admin.updateUserById(usuarioId, {
     ban_duration: habilitar ? "none" : DURACION_BLOQUEO,
   });
-  if (!errorAuth) return { ok: true, datos: null };
+  if (!errorAuth) {
+    // Solo se avisa de un cambio real: repetir la acción no reenvía el correo.
+    if (cambio !== true) return { ok: true, datos: { avisoEnviado: null } };
+    const correo = datosAuth.user?.email;
+    if (!correo) return { ok: true, datos: { avisoEnviado: false } };
+
+    const aviso = avisoEstadoCuenta({ habilitada: habilitar, motivo });
+    const avisoEnviado = await enviarCorreo({ para: correo, ...aviso });
+    return { ok: true, datos: { avisoEnviado } };
+  }
 
   // Solo el código: el mensaje de Auth puede incluir el correo del usuario.
   console.error(`[cuentas] Supabase Auth no aplicó el cambio (código: ${errorAuth.code ?? "desconocido"}).`);

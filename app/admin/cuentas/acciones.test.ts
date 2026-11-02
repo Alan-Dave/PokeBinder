@@ -7,8 +7,13 @@ vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
+vi.mock("@/lib/correo", async (original) => ({
+  ...(await original<typeof import("@/lib/correo")>()),
+  enviarCorreo: vi.fn(),
+}));
 
 import { revalidatePath } from "next/cache";
+import { enviarCorreo } from "@/lib/correo";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { cambiarEstadoCuentaAccion } from "./acciones";
@@ -24,7 +29,7 @@ function formulario(campos: Record<string, string>) {
 
 function sesion() {
   const base = { rpc: vi.fn().mockResolvedValue({ data: true, error: null }) };
-  const admin = { auth: { admin: { updateUserById: vi.fn().mockResolvedValue({ data: null, error: null }) } } };
+  const admin = { auth: { admin: { updateUserById: vi.fn().mockResolvedValue({ data: { user: { email: "carla@correo.cl" } }, error: null }) } } };
   vi.mocked(createClient).mockResolvedValue(base as never);
   vi.mocked(createAdminClient).mockReturnValue(admin as never);
   return base;
@@ -34,6 +39,7 @@ beforeEach(() => {
   vi.mocked(createClient).mockReset();
   vi.mocked(createAdminClient).mockReset();
   vi.mocked(revalidatePath).mockReset();
+  vi.mocked(enviarCorreo).mockReset().mockResolvedValue(true);
 });
 
 describe("cambiarEstadoCuentaAccion", () => {
@@ -48,7 +54,7 @@ describe("cambiarEstadoCuentaAccion", () => {
       formulario({ usuarioId: USUARIO, habilitar: texto, motivo: "Abuso del sistema" }),
     );
 
-    expect(estado).toEqual({ error: null, exito: true });
+    expect(estado).toEqual({ error: null, exito: true, aviso: null });
     expect(base.rpc).toHaveBeenCalledWith("cambiar_estado_cuenta", {
       p_usuario_id: USUARIO,
       p_habilitar: valor,
@@ -70,5 +76,21 @@ describe("cambiarEstadoCuentaAccion", () => {
     expect(createClient).not.toHaveBeenCalled();
     expect(createAdminClient).not.toHaveBeenCalled();
     expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("informa cuando el cambio se hizo pero el correo no salió", async () => {
+    sesion();
+    vi.mocked(enviarCorreo).mockResolvedValue(false);
+
+    const estado = await cambiarEstadoCuentaAccion(
+      INICIAL,
+      formulario({ usuarioId: USUARIO, habilitar: "false", motivo: "Abuso del sistema" }),
+    );
+
+    expect(estado).toEqual({
+      error: null,
+      exito: true,
+      aviso: "No se pudo enviar el aviso por correo al usuario.",
+    });
   });
 });

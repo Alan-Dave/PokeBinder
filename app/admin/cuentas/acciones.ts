@@ -24,5 +24,9 @@ export async function cambiarEstadoCuentaAccion(
   if (!resultado.ok) return { error: resultado.error, exito: false };
 
   revalidatePath("/admin/cuentas");
-  return { error: null, exito: true };
+  return {
+    error: null,
+    exito: true,
+    aviso: resultado.datos.avisoEnviado === false ? "No se pudo enviar el aviso por correo al usuario." : null,
+  };
 }

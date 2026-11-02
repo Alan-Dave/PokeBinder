@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { esClaveSecreta, parsePublicEnv, parseServerEnv } from "./env";
+import { esClaveSecreta, parseCorreoEnv, parsePublicEnv, parseServerEnv } from "./env";
 
 // Construye un JWT sin firma válida: solo interesa el payload.
 function jwtConRol(role: string): string {
@@ -77,5 +77,26 @@ describe("parseServerEnv", () => {
 
   it("falla si falta la variable", () => {
     expect(() => parseServerEnv({})).toThrow(/Falta SUPABASE_SECRET_KEY/);
+  });
+});
+
+describe("parseCorreoEnv", () => {
+  const correo = { MAILERSEND_API_KEY: "clave-de-prueba", CORREO_REMITENTE: "avisos@pokebinder.test" };
+
+  it("acepta una configuración completa", () => {
+    expect(parseCorreoEnv(correo)).toEqual(correo);
+  });
+
+  it("devuelve null si no hay nada configurado: el correo queda desactivado", () => {
+    expect(parseCorreoEnv({})).toBeNull();
+  });
+
+  it("falla con una configuración a medias", () => {
+    expect(() => parseCorreoEnv({ MAILERSEND_API_KEY: "clave-de-prueba" })).toThrow(/CORREO_REMITENTE/);
+    expect(() => parseCorreoEnv({ CORREO_REMITENTE: "avisos@pokebinder.test" })).toThrow(/MAILERSEND_API_KEY/);
+  });
+
+  it("falla si el remitente no es un correo", () => {
+    expect(() => parseCorreoEnv({ ...correo, CORREO_REMITENTE: "PokeBinder" })).toThrow(/CORREO_REMITENTE/);
   });
 });
