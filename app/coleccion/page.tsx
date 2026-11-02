@@ -27,7 +27,11 @@ export default async function ColeccionPage({
         <p role="alert" className="rounded-md bg-red-100 px-4 py-2 text-red-900">
           {resultado.error === SIN_SESION ? "Inicia sesión para ver tu colección." : resultado.error}
         </p>
-        {resultado.error !== SIN_SESION && (
+        {resultado.error === SIN_SESION ? (
+          <Link href="/login" className="text-sm underline">
+            Ir a iniciar sesión
+          </Link>
+        ) : (
           <Link href="/coleccion" className="text-sm underline">
             Volver a la primera página
           </Link>
