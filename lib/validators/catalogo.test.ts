@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buscarCatalogoSchema, patronPrefijo } from "./catalogo";
+import { buscarCatalogoSchema, idDesdeRuta, patronPrefijo } from "./catalogo";
 
 describe("buscarCatalogoSchema", () => {
   it("acepta una búsqueda vacía y usa la página 1", () => {
@@ -82,4 +82,21 @@ describe("patronPrefijo", () => {
   it("una entrada con forma de inyección queda como texto literal", () => {
     expect(patronPrefijo("x' OR 1=1 --")).toBe("x' or 1=1 --%");
   });
+});
+
+describe("idDesdeRuta", () => {
+  it.each([
+    ["1", 1],
+    ["42", 42],
+    ["123456789012345", 123456789012345],
+  ])("convierte %j en %d", (texto, esperado) => {
+    expect(idDesdeRuta(texto)).toBe(esperado);
+  });
+
+  it.each(["", "0", "01", "-1", "1.5", "1e3", "0x10", " 12", "12 ", "abc", "1 OR 1=1", "1234567890123456"])(
+    "rechaza %j",
+    (texto) => {
+      expect(idDesdeRuta(texto)).toBeNull();
+    },
+  );
 });
