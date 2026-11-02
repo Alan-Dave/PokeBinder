@@ -59,14 +59,15 @@ rules:
     message: >-
       createAdminClient() usa la clave secreta y se salta RLS. Su uso está
       acotado a los módulos listados en docs/seguridad.md: firmar URLs de
-      Storage (lib/imagenes.ts) y bloquear cuentas en Supabase Auth después de
-      que la base autorizó al administrador (lib/cuentas.ts).
+      Storage (lib/imagenes.ts), bloquear cuentas en Supabase Auth después de
+      que la base autorizó al administrador (lib/cuentas.ts) y mover los
+      archivos de las propuestas de imagen (lib/propuestas.ts).
     metadata:
       cwe: 'CWE-250: Execution with Unnecessary Privileges'
       owasp: 'A01:2021 - Broken Access Control'
     pattern: createAdminClient()
     paths:
-      exclude: ['/lib/imagenes.ts', '/lib/cuentas.ts', '/lib/supabase/admin.ts']
+      exclude: ['/lib/imagenes.ts', '/lib/cuentas.ts', '/lib/propuestas.ts', '/lib/supabase/admin.ts']
 
   - id: pokebinder-secreto-en-variable-publica
     languages: [typescript]

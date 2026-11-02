@@ -108,7 +108,8 @@ Pendientes de este cambio:
   que ese correo tiene una cuenta deshabilitada; en ese caso conviene mostrar
   el mismo mensaje que para credenciales incorrectas.
 - La regla Semgrep `pokebinder-cliente-admin-acotado` permite ahora
-  `createAdminClient()` también en `lib/cuentas.ts`, con este mismo motivo.
+  `createAdminClient()` también en `lib/cuentas.ts` y `lib/propuestas.ts`,
+  con los motivos descritos en esta sección.
 
 **Avisos por correo (MailerSend):** al habilitar o deshabilitar una cuenta se
 envía un correo a la dirección registrada, con el motivo. La dirección sale de
