@@ -7,7 +7,7 @@ import type { EstadoFormulario } from "@/lib/estado-formulario";
 /**
  * Una Server Action es un endpoint público: la validación y el registro viven
  * en lib/auth.ts. Aquí solo se leen los campos del formulario. Nunca se lee un
- * rol: el trigger de la base crea todo perfil como usuario_normal.
+ * rol: el trigger de la base crea todo perfil como usuario.
  */
 export async function registrarAccion(
   _previo: EstadoFormulario,

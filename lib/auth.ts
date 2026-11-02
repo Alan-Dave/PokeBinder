@@ -12,7 +12,7 @@ import { loginSchema, registroSchema } from "@/lib/validators/auth";
  * registrado, y eso ayuda a quien busca cuentas de otras personas.
  *
  * El rol nunca viaja desde aquí: el trigger de la base crea el perfil siempre
- * como usuario_normal (ver supabase/migrations/20260928004000).
+ * como usuario (ver supabase/migrations/20261102120000_dos_perfiles.sql).
  */
 
 export type Resultado<T> = { ok: true; datos: T } | { ok: false; error: string };

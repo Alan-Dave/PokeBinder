@@ -11,17 +11,17 @@ describe("asignarRolSchema", () => {
     expect(asignarRolSchema.parse(entradaValida)).toEqual(entradaValida);
   });
 
-  it.each(["superusuario", "administrador", "usuario_normal"])("acepta el rol %s", (rol) => {
+  it.each(["administrador", "usuario"])("acepta el rol %s", (rol) => {
     expect(asignarRolSchema.safeParse({ ...entradaValida, rol }).success).toBe(true);
   });
 
-  it("rechaza un rol que no existe", () => {
-    const resultado = asignarRolSchema.safeParse({ ...entradaValida, rol: "admin" });
+  it.each(["admin", "superusuario", "usuario_normal"])("rechaza el rol inexistente %s", (rol) => {
+    const resultado = asignarRolSchema.safeParse({ ...entradaValida, rol });
     expect(resultado.success).toBe(false);
   });
 
   it("rechaza el rol con mayúsculas", () => {
-    const resultado = asignarRolSchema.safeParse({ ...entradaValida, rol: "Superusuario" });
+    const resultado = asignarRolSchema.safeParse({ ...entradaValida, rol: "Administrador" });
     expect(resultado.success).toBe(false);
   });
 

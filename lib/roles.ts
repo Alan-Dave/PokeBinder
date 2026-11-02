@@ -9,7 +9,7 @@ import { asignarRolSchema, type Rol } from "@/lib/validators/roles";
  * La autorización real la hacen las funciones SQL asignar_rol y
  * listar_perfiles, con la sesión del usuario: aunque alguien se salte esta
  * capa y llame a la Data API directamente, la base rechaza a quien no sea
- * superusuario. Aquí se valida la entrada y se traducen los errores.
+ * administrador. Aquí se valida la entrada y se traducen los errores.
  */
 
 export type Perfil = {
@@ -26,7 +26,7 @@ export type Resultado<T> = { ok: true; datos: T } | { ok: false; error: string }
 const MENSAJES: Record<string, string> = {
   "42501": "No tienes permiso para realizar esta acción.",
   P0002: "El usuario no existe.",
-  "23514": "El sistema debe conservar al menos un superusuario.",
+  "23514": "El sistema debe conservar al menos un administrador.",
 };
 
 function traducirError(codigo: string | undefined, origen: string, detalle: unknown): string {

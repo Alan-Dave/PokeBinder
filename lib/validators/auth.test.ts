@@ -58,7 +58,7 @@ describe("registroSchema", () => {
   });
 
   it("descarta campos que no existen: no se puede pedir un rol al registrarse", () => {
-    const r = registroSchema.parse({ ...registroValido, rol: "superusuario" });
+    const r = registroSchema.parse({ ...registroValido, rol: "administrador" });
     expect(r).not.toHaveProperty("rol");
   });
 });

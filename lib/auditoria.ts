@@ -7,7 +7,7 @@ import { AUDITORIA_POR_PAGINA, listarAuditoriaSchema } from "@/lib/validators/au
  * Lectura de la bitácora de auditoría del lado del servidor.
  *
  * La autorización real la hace la función SQL listar_auditoria con la sesión
- * del usuario: solo un superusuario puede leer, aunque alguien llame a la Data
+ * del usuario: solo un administrador puede leer, aunque alguien llame a la Data
  * API directamente. Aquí se valida la entrada y se traducen los errores.
  * Este módulo solo lee: la bitácora es de solo inserción y la escriben los
  * triggers de la base, no la aplicación.

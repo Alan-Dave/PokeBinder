@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // Mismos valores que el enum public.rol_usuario de la base.
-export const ROLES = ["superusuario", "administrador", "usuario_normal"] as const;
+export const ROLES = ["administrador", "usuario"] as const;
 
 export type Rol = (typeof ROLES)[number];
 

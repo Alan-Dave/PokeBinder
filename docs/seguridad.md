@@ -35,7 +35,7 @@ distinción, para el estado actual del proyecto (PBI-03, 04, 07 y 08).
 | Contraseña de cada usuario | `auth.users`, la gestiona Supabase Auth | Personal | La aplicación nunca la ve ni la guarda: Supabase Auth almacena el hash. Ninguna tabla propia duplica este dato. |
 | Correo de cada usuario | `auth.users` | Personal | Fuera de las tablas propias del proyecto; acceso sujeto a las políticas de Supabase Auth, no a las de `public`. |
 | `nombre_visible`, `rol` | `perfiles` | Personal | RLS: cada usuario ve y edita solo su propio perfil ([`perfiles_mazos_auditoria`](../supabase/migrations/20260928004000_perfiles_mazos_auditoria.sql)). Nadie puede escribir su propio `rol` (`grant update (nombre_visible)` sin incluir `rol`). Cambiarlo pasa por `asignar_rol`, verificado en el servidor (regla 6) y auditado. |
-| Rol de **todos** los usuarios a la vez | Resultado de `listar_perfiles()` | Personal (acceso masivo) | Solo lo puede pedir un superusuario. Antes no dejaba registro; esta entrega agrega una fila de auditoría cada vez que se llama ([`auditar_listar_perfiles`](../supabase/migrations/20260928080000_auditar_listar_perfiles.sql)), porque ver los datos personales de todos de un vistazo pesa distinto que ver los propios. |
+| Rol de **todos** los usuarios a la vez | Resultado de `listar_perfiles()` | Personal (acceso masivo) | Solo lo puede pedir un administrador. Antes no dejaba registro; esta entrega agrega una fila de auditoría cada vez que se llama ([`auditar_listar_perfiles`](../supabase/migrations/20260928080000_auditar_listar_perfiles.sql)), porque ver los datos personales de todos de un vistazo pesa distinto que ver los propios. |
 | Inventario y mazos (`inventario`, `mazos`, `mazo_cartas`) | Tablas propias | Personal | RLS: `for all` restringido a `usuario_id = auth.uid()`, con `using` **y** `with check`. Nadie ve ni modifica la colección o los mazos de otro. |
 | Historial de cambios de rol (`auditoria`) | Tabla propia | Personal (derivado) | Solo inserción: los triggers bloquean `update`, `delete` y `truncate`, incluso para `service_role`. Sin políticas de lectura: nadie la consulta por la API, ni con sesión. `usuario_id` no tiene clave foránea a propósito, para que el registro sobreviva si se borra la cuenta. |
 | Ruta de la imagen de cada carta (`cartas.imagen_path`) | Tabla propia | Público (no personal) | No es un dato de usuario: es la ubicación de un archivo del catálogo. Se expone sin problema por la misma política pública de `cartas`; lo que protege el bucket es que la ruta sola no sirve sin una URL firmada ([`imagen_path`](../supabase/migrations/20260928050000_imagen_path.sql)). |
@@ -77,6 +77,16 @@ y el rol de quien llama se verifica dentro de la función. Probado en vivo
 contra el proyecto remoto (seis casos: autoascenso, degradar a otro sin ser
 superusuario, autodegradación, asignación válida con su registro en
 auditoría, `listar_perfiles` con y sin el rol, y sin sesión).
+
+**Dos perfiles (migración `20261102120000_dos_perfiles`):** el enum `rol_usuario`
+queda con `administrador` y `usuario`; `superusuario` pasó a `administrador` y
+`usuario_normal` a `usuario`. Las tres funciones con control de rol
+(`asignar_rol`, `listar_perfiles`, `listar_auditoria`) exigen `administrador`.
+Probado contra un PostgreSQL 16 local con las migraciones aplicadas sobre
+perfiles con los tres roles viejos (conversión, registro nuevo como `usuario`,
+rechazo a `usuario` y a `anon`, autocambio, sin sesión y auditoría); falta
+repetir la prueba contra el proyecto remoto. En una base nueva no queda ningún
+administrador: el primero se asigna desde la consola de Supabase.
 
 **Pendiente de probar en vivo:** que los triggers de `auditoria` bloqueen
 `update`, `delete` y `truncate` incluso para `service_role` (regla 7). El
