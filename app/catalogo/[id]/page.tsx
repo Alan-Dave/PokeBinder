@@ -65,11 +65,12 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
         <div className="flex aspect-[5/7] w-full max-w-md items-center justify-center overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-900">
-          {url ? (
-            <VisorImagen url={url} alt={carta.nombre} />
-          ) : (
-            <span className="text-sm text-zinc-500">Sin imagen</span>
-          )}
+          <VisorImagen
+            url={url ?? null}
+            urlHd={`/api/cartas/${carta.id}/imagen-hd`}
+            alt={carta.nombre}
+          />
+
         </div>
 
         <div className="flex flex-col gap-6">
