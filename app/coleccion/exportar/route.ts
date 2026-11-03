@@ -3,14 +3,19 @@ import { exportarInventario, SIN_SESION } from "@/lib/exportar";
 // Depende de la sesión del usuario: nunca se sirve desde una copia en caché.
 export const dynamic = "force-dynamic";
 
-// Solo lectura: exporta el inventario del usuario con sesión. El único
-// parámetro es el formato, que valida lib/exportar.ts.
+// Solo lectura: exporta el inventario del usuario con sesión. Los parámetros
+// (formato y filtros opcionales) los valida lib/exportar.ts antes de consultar.
 export async function GET(solicitud: Request) {
-  const formato = new URL(solicitud.url).searchParams.get("formato") ?? undefined;
-  const resultado = await exportarInventario({ formato });
+  const parametros = new URL(solicitud.url).searchParams;
+  const resultado = await exportarInventario({
+    formato: parametros.get("formato") ?? undefined,
+    idioma: parametros.get("idioma") ?? undefined,
+    setId: parametros.get("setId") ?? undefined,
+    rareza: parametros.get("rareza") ?? undefined,
+  });
 
   if (!resultado.ok) {
-    const estado = resultado.error === SIN_SESION ? 401 : resultado.error.startsWith("El formato") ? 400 : 500;
+    const estado = resultado.error === SIN_SESION ? 401 : resultado.error.startsWith("No se pudo") ? 500 : 400;
     return new Response(resultado.error, { status: estado });
   }
 

@@ -25,7 +25,7 @@ function cliente(
     llamadas.push(registro);
     const resp = () => (tabla === "inventario" ? colaInventario.shift() : tablas[tabla]) ?? { data: [], error: null };
     const consulta: Record<string, unknown> = {};
-    for (const m of ["select", "order", "range", "limit", "in", "eq"]) {
+    for (const m of ["select", "order", "range", "limit", "in", "eq", "ilike"]) {
       consulta[m] = (...args: unknown[]) => {
         registro.filtros.push([m, ...args]);
         return consulta;
@@ -110,6 +110,61 @@ describe("obtenerResumenInventario", () => {
     cliente({ id: "u1" }, { inventario: [{ data: [inv(1, 1)], error: null }], sets: { data: null, error: { code: "XX000" } } });
 
     expect(await obtenerResumenInventario()).toEqual({ ok: false, error: "No se pudo generar el reporte." });
+  });
+});
+
+describe("obtenerResumenInventario con filtros", () => {
+  it("aplica idioma, set y rareza como parámetros, con el prefijo escapado", async () => {
+    const { llamadas } = cliente({ id: "u1" }, { inventario: [{ data: [], error: null }] });
+
+    await obtenerResumenInventario({ idioma: "es", setId: "sv1", rareza: "50%_Rare" });
+
+    const filtros = llamadas.find((l) => l.tabla === "inventario")!.filtros;
+    expect(filtros).toContainEqual(["eq", "cartas.idioma", "es"]);
+    expect(filtros).toContainEqual(["eq", "cartas.set_id", "sv1"]);
+    expect(filtros).toContainEqual(["ilike", "cartas.rarity", String.raw`50\%\_rare%`]);
+  });
+
+  it("sin filtros no agrega condiciones sobre la carta", async () => {
+    const { llamadas } = cliente({ id: "u1" }, { inventario: [{ data: [], error: null }] });
+
+    await obtenerResumenInventario();
+
+    const filtros = llamadas.find((l) => l.tabla === "inventario")!.filtros;
+    expect(filtros.filter(([m]) => m === "eq" || m === "ilike")).toEqual([]);
+  });
+
+  it.each([
+    ["idioma inválido", { idioma: "xx" }],
+    ["set con inyección", { setId: "x' OR '1'='1" }],
+    ["rareza demasiado larga", { rareza: "a".repeat(61) }],
+  ])("rechaza %s sin tocar la base", async (_, filtros) => {
+    const { c } = cliente({ id: "u1" }, {});
+
+    expect((await obtenerResumenInventario(filtros)).ok).toBe(false);
+    expect(c.from).not.toHaveBeenCalled();
+  });
+});
+
+describe("obtenerFaltantes con rareza", () => {
+  const cartas = { data: [{ id: 1, nombre: "A", number: "1", rarity: "Rare" }], error: null };
+
+  it("filtra las cartas del set por prefijo de rareza", async () => {
+    const { llamadas } = cliente({ id: "u1" }, { cartas, inventario: [{ data: [], error: null }] });
+
+    const r = await obtenerFaltantes({ setId: "sv1", idioma: "en", rareza: "Ra" });
+
+    expect(r.ok && r.datos.total).toBe(1);
+    expect(llamadas.find((l) => l.tabla === "cartas")!.filtros).toContainEqual(["ilike", "rarity", "ra%"]);
+  });
+
+  it("dice que no hay cartas con esa rareza, no que el set no exista", async () => {
+    cliente({ id: "u1" }, { cartas: { data: [], error: null }, inventario: [{ data: [], error: null }] });
+
+    expect(await obtenerFaltantes({ setId: "sv1", idioma: "en", rareza: "Zzz" })).toEqual({
+      ok: false,
+      error: "No hay cartas de ese set con esa rareza.",
+    });
   });
 });
 

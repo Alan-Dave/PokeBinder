@@ -1,13 +1,14 @@
 import "server-only";
 
 import { type Archivo, construirArchivo } from "@/lib/archivo";
+import { consultarInventario } from "@/lib/inventario-filtrado";
 import { createClient } from "@/lib/supabase/server";
 import { exportarInventarioSchema } from "@/lib/validators/exportar";
 
 /**
  * Exportación del inventario del usuario a CSV o Excel (PBI-22).
  *
- * El único parámetro del usuario es el formato, validado con zod. El alcance
+ * Los parámetros del usuario (formato y filtros opcionales) se validan con zod. El alcance
  * lo fija RLS sobre public.inventario (usuario_id = auth.uid()), así que solo
  * puede exportar lo suyo. Lee por bloques para no depender del límite de filas
  * por consulta.
@@ -41,11 +42,11 @@ export async function exportarInventario(entrada: unknown): Promise<ResultadoExp
 
   const filas: FilaExportada[] = [];
   for (let desde = 0; desde < FILAS_MAX; desde += BLOQUE) {
-    const { data, error } = await supabase
-      .from("inventario")
-      .select("variante, cantidad, cartas(id_api, nombre, idioma)")
-      .order("id")
-      .range(desde, desde + BLOQUE - 1);
+    const { data, error } = await consultarInventario(
+      supabase,
+      "variante, cantidad, cartas!inner(id_api, nombre, idioma)",
+      validado.data,
+    ).range(desde, desde + BLOQUE - 1);
 
     if (error) {
       console.error("[exportar] Error inesperado al leer el inventario:", error);

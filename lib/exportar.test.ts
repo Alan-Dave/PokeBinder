@@ -11,13 +11,18 @@ type Respuesta = { data: unknown[] | null; error: { code: string } | null };
 function sesion(user: object | null, respuestas: Respuesta[]) {
   const range = vi.fn();
   for (const r of respuestas) range.mockResolvedValueOnce(r);
-  const consulta = { select: () => consulta, order: () => consulta, range };
+  const filtros: unknown[][] = [];
+  const registrar = (m: string) => (...args: unknown[]) => {
+    filtros.push([m, ...args]);
+    return consulta;
+  };
+  const consulta = { select: registrar("select"), order: registrar("order"), eq: registrar("eq"), ilike: registrar("ilike"), range };
   const cliente = {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user } }) },
     from: vi.fn(() => consulta),
   };
   vi.mocked(createClient).mockResolvedValue(cliente as never);
-  return { cliente, range };
+  return { cliente, range, filtros };
 }
 
 function csv(r: { ok: true; archivo: { contenido: string | Uint8Array } }) {
@@ -130,5 +135,24 @@ describe("exportarInventario", () => {
     expect(r.ok && r.archivo.tipo).toContain("spreadsheetml.sheet");
     // Un .xlsx es un ZIP: empieza con la firma «PK».
     expect(r.ok && (r.archivo.contenido as Uint8Array).slice(0, 2)).toEqual(new Uint8Array([0x50, 0x4b]));
+  });
+
+  it("aplica los filtros validados como parámetros", async () => {
+    const { filtros } = sesion({ id: "u1" }, [{ data: [fila("A")], error: null }]);
+
+    await exportarInventario({ idioma: "en", setId: "sv1", rareza: "Rare" });
+
+    expect(filtros).toContainEqual(["eq", "cartas.idioma", "en"]);
+    expect(filtros).toContainEqual(["eq", "cartas.set_id", "sv1"]);
+    expect(filtros).toContainEqual(["ilike", "cartas.rarity", "rare%"]);
+  });
+
+  it("rechaza un filtro inválido sin consultar la base", async () => {
+    const { cliente } = sesion({ id: "u1" }, []);
+
+    const r = await exportarInventario({ setId: "x' OR '1'='1" });
+
+    expect(r.ok).toBe(false);
+    expect(cliente.from).not.toHaveBeenCalled();
   });
 });

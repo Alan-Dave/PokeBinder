@@ -1,8 +1,11 @@
 import "server-only";
 
 import { type Archivo, construirArchivo } from "@/lib/archivo";
+import { consultarInventario } from "@/lib/inventario-filtrado";
 import { calcularFaltantes, type CartaSet, type Faltantes, type FilaResumen, resumirInventario, type ResumenInventario } from "@/lib/resumen";
 import { createClient } from "@/lib/supabase/server";
+import { patronPrefijo } from "@/lib/validators/catalogo";
+import { filtrosInventarioSchema } from "@/lib/validators/filtros";
 import { exportarFaltantesSchema, faltantesSchema } from "@/lib/validators/reportes";
 
 /**
@@ -40,17 +43,20 @@ async function usuarioActual() {
   return { supabase, user };
 }
 
-export async function obtenerResumenInventario(): Promise<Resultado<ResumenConNombres>> {
+export async function obtenerResumenInventario(entrada: unknown = {}): Promise<Resultado<ResumenConNombres>> {
+  const validado = filtrosInventarioSchema.safeParse(entrada);
+  if (!validado.success) return { ok: false, error: validado.error.issues[0].message };
+
   const { supabase, user } = await usuarioActual();
   if (!user) return { ok: false, error: SIN_SESION };
 
   const filas: (FilaResumen & { carta_id: number })[] = [];
   for (let desde = 0; desde < FILAS_MAX; desde += BLOQUE) {
-    const { data, error } = await supabase
-      .from("inventario")
-      .select("carta_id, cantidad, cartas(set_id, idioma, price)")
-      .order("id")
-      .range(desde, desde + BLOQUE - 1);
+    const { data, error } = await consultarInventario(
+      supabase,
+      "carta_id, cantidad, cartas!inner(set_id, idioma, price)",
+      validado.data,
+    ).range(desde, desde + BLOQUE - 1);
 
     if (error) {
       console.error("[reportes] Error inesperado al leer el inventario:", error);
@@ -79,14 +85,25 @@ export async function obtenerResumenInventario(): Promise<Resultado<ResumenConNo
 
 export type ReporteFaltantes = Faltantes & { setId: string; idioma: string; nombreSet: string | null };
 
+function cartasDelSet(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  setId: string,
+  idioma: string,
+  rareza: string | undefined,
+) {
+  let consulta = supabase.from("cartas").select("id, nombre, number, rarity").eq("set_id", setId).eq("idioma", idioma);
+  if (rareza) consulta = consulta.ilike("rarity", patronPrefijo(rareza));
+  return consulta.limit(CARTAS_SET_MAX);
+}
+
 async function faltantesDe(
-  entrada: { setId: string; idioma: string },
+  entrada: { setId: string; idioma: string; rareza?: string },
   supabase: Awaited<ReturnType<typeof createClient>>,
 ): Promise<Resultado<ReporteFaltantes>> {
-  const { setId, idioma } = entrada;
+  const { setId, idioma, rareza } = entrada;
 
   const [cartas, poseidas, set] = await Promise.all([
-    supabase.from("cartas").select("id, nombre, number, rarity").eq("set_id", setId).eq("idioma", idioma).limit(CARTAS_SET_MAX),
+    cartasDelSet(supabase, setId, idioma, rareza),
     supabase
       .from("inventario")
       .select("carta_id, cartas!inner(set_id, idioma)")
@@ -101,7 +118,9 @@ async function faltantesDe(
     console.error("[reportes] Error inesperado al calcular los faltantes:", fallo);
     return { ok: false, error: FALLO };
   }
-  if (!cartas.data || cartas.data.length === 0) return { ok: false, error: "No existe ese set en ese idioma." };
+  if (!cartas.data || cartas.data.length === 0) {
+    return { ok: false, error: rareza ? "No hay cartas de ese set con esa rareza." : "No existe ese set en ese idioma." };
+  }
 
   const ids = new Set((poseidas.data as unknown as { carta_id: number }[]).map((f) => f.carta_id));
   const faltantes = calcularFaltantes(cartas.data as CartaSet[], ids);
