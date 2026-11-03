@@ -37,6 +37,8 @@ const MENSAJES: Record<string, string> = {
   "23505": "Esa carta y variante ya están en tu inventario. Edita la cantidad.",
   "23514": "Esa variante no existe para la carta, o la cantidad no es válida.",
   "23503": "La carta no existe.",
+  // Código propio de la migración binders_copias: la carta ocupa más casillas que la cantidad pedida.
+  PB002: "Esa carta está en más casillas de tus binders que la cantidad indicada. Quítala del binder antes de bajar la cantidad.",
   "42501": "No tienes permiso para realizar esta acción.",
 };
 

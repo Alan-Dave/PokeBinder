@@ -189,6 +189,15 @@ describe("colocarCarta", () => {
     expect(r).toEqual({ ok: false, error: "Esa casilla no existe en el binder, o el tamaño no es válido." });
   });
 
+  it("explica que no quedan copias libres de la carta", async () => {
+    clienteFalso({ respuestas: [{ error: { code: "PB001" } }] });
+    const r = await colocarCarta({ binderId: 1, pagina: 1, posicion: 0, inventarioId: 9 });
+    expect(r).toEqual({
+      ok: false,
+      error: "Ya pusiste todas tus copias de esa carta en el binder. Quita una de otra casilla para usarla aquí.",
+    });
+  });
+
   it("traduce el rechazo de RLS (inventario ajeno) sin revelar nada más", async () => {
     clienteFalso({ respuestas: [{ error: { code: "42501" } }] });
     const r = await colocarCarta({ binderId: 1, pagina: 1, posicion: 0, inventarioId: 9 });

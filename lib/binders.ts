@@ -62,6 +62,8 @@ const MENSAJES: Record<string, string> = {
   "23505": "Ya tienes un binder con ese nombre.",
   "23514": "Esa casilla no existe en el binder, o el tamaño no es válido.",
   "23503": "El binder o la carta no existe.",
+  // Código propio de la migración binders_copias: la carta ya ocupa tantas casillas como copias tienes.
+  PB001: "Ya pusiste todas tus copias de esa carta en el binder. Quita una de otra casilla para usarla aquí.",
   "42501": "No tienes permiso para realizar esta acción.",
 };
 
