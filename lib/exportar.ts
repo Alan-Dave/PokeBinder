@@ -2,16 +2,20 @@ import "server-only";
 
 import { aCsv } from "@/lib/csv";
 import { createClient } from "@/lib/supabase/server";
+import { exportarInventarioSchema } from "@/lib/validators/exportar";
+import { aXlsx } from "@/lib/xlsx";
 
 /**
- * Exportación del inventario del usuario a CSV (PBI-22).
+ * Exportación del inventario del usuario a CSV o Excel (PBI-22).
  *
- * No recibe parámetros del usuario: el alcance lo fija RLS sobre
- * public.inventario (usuario_id = auth.uid()), así que solo puede exportar
- * lo suyo. Lee por bloques para no depender del límite de filas por consulta.
+ * El único parámetro del usuario es el formato, validado con zod. El alcance
+ * lo fija RLS sobre public.inventario (usuario_id = auth.uid()), así que solo
+ * puede exportar lo suyo. Lee por bloques para no depender del límite de filas
+ * por consulta.
  */
 
-export type ResultadoCsv = { ok: true; csv: string } | { ok: false; error: string };
+export type Archivo = { contenido: string | Uint8Array; tipo: string; nombre: string };
+export type ResultadoExportacion = { ok: true; archivo: Archivo } | { ok: false; error: string };
 
 export const SIN_SESION = "Se requiere una sesión iniciada.";
 
@@ -27,7 +31,10 @@ type FilaExportada = {
   cartas: { id_api: string; nombre: string; idioma: string } | null;
 };
 
-export async function exportarInventarioCsv(): Promise<ResultadoCsv> {
+export async function exportarInventario(entrada: unknown): Promise<ResultadoExportacion> {
+  const validado = exportarInventarioSchema.safeParse(entrada);
+  if (!validado.success) return { ok: false, error: validado.error.issues[0].message };
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -51,9 +58,20 @@ export async function exportarInventarioCsv(): Promise<ResultadoCsv> {
     if (bloque.length < BLOQUE) break;
   }
 
-  const csv = aCsv(
-    ENCABEZADOS,
-    filas.map((f) => [f.cartas?.id_api, f.cartas?.nombre, f.cartas?.idioma, f.variante, f.cantidad]),
-  );
-  return { ok: true, csv };
+  const tabla = filas.map((f) => [f.cartas?.id_api, f.cartas?.nombre, f.cartas?.idioma, f.variante, f.cantidad]);
+
+  if (validado.data.formato === "xlsx") {
+    return {
+      ok: true,
+      archivo: {
+        contenido: await aXlsx("Inventario", ENCABEZADOS, tabla),
+        tipo: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        nombre: "inventario.xlsx",
+      },
+    };
+  }
+  return {
+    ok: true,
+    archivo: { contenido: aCsv(ENCABEZADOS, tabla), tipo: "text/csv; charset=utf-8", nombre: "inventario.csv" },
+  };
 }

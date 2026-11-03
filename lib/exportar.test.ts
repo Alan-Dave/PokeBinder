@@ -4,7 +4,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 
 import { createClient } from "@/lib/supabase/server";
-import { exportarInventarioCsv, FILAS_MAX } from "./exportar";
+import { exportarInventario, FILAS_MAX } from "./exportar";
 
 type Respuesta = { data: unknown[] | null; error: { code: string } | null };
 
@@ -20,6 +20,10 @@ function sesion(user: object | null, respuestas: Respuesta[]) {
   return { cliente, range };
 }
 
+function csv(r: { ok: true; archivo: { contenido: string | Uint8Array } }) {
+  return r.archivo.contenido as string;
+}
+
 const fila = (nombre: string, cantidad = 1) => ({
   variante: "normal",
   cantidad,
@@ -31,11 +35,11 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
-describe("exportarInventarioCsv", () => {
+describe("exportarInventario", () => {
   it("sin sesión no consulta la base", async () => {
     const { cliente } = sesion(null, []);
 
-    const r = await exportarInventarioCsv();
+    const r = await exportarInventario({});
 
     expect(r).toEqual({ ok: false, error: "Se requiere una sesión iniciada." });
     expect(cliente.from).not.toHaveBeenCalled();
@@ -44,26 +48,26 @@ describe("exportarInventarioCsv", () => {
   it("exporta encabezados y filas", async () => {
     sesion({ id: "u1" }, [{ data: [fila("Pikachu", 2)], error: null }]);
 
-    const r = await exportarInventarioCsv();
+    const r = await exportarInventario({});
 
-    expect(r.ok && r.csv).toContain("ID de carta (API),Nombre,Idioma,Variante,Cantidad");
-    expect(r.ok && r.csv).toContain("x1,Pikachu,es,normal,2");
+    expect(r.ok && csv(r)).toContain("ID de carta (API),Nombre,Idioma,Variante,Cantidad");
+    expect(r.ok && csv(r)).toContain("x1,Pikachu,es,normal,2");
   });
 
   it("deja vacíos los datos de una carta que ya no existe", async () => {
     sesion({ id: "u1" }, [{ data: [{ variante: "normal", cantidad: 1, cartas: null }], error: null }]);
 
-    const r = await exportarInventarioCsv();
+    const r = await exportarInventario({});
 
-    expect(r.ok && r.csv).toContain(",,,normal,1");
+    expect(r.ok && csv(r)).toContain(",,,normal,1");
   });
 
   it("neutraliza un nombre que empieza como fórmula", async () => {
     sesion({ id: "u1" }, [{ data: [fila("=CMD()")], error: null }]);
 
-    const r = await exportarInventarioCsv();
+    const r = await exportarInventario({});
 
-    expect(r.ok && r.csv).toContain("'=CMD()");
+    expect(r.ok && csv(r)).toContain("'=CMD()");
   });
 
   it("sigue leyendo mientras el bloque venga lleno", async () => {
@@ -73,11 +77,11 @@ describe("exportarInventarioCsv", () => {
       { data: [fila("B")], error: null },
     ]);
 
-    const r = await exportarInventarioCsv();
+    const r = await exportarInventario({});
 
     expect(range).toHaveBeenCalledTimes(2);
     expect(range).toHaveBeenNthCalledWith(2, 1000, 1999);
-    expect(r.ok && r.csv.split("\r\n")).toHaveLength(1 + 1001 + 1);
+    expect(r.ok && csv(r).split("\r\n")).toHaveLength(1 + 1001 + 1);
   });
 
   it("se detiene en el tope de filas", async () => {
@@ -87,7 +91,7 @@ describe("exportarInventarioCsv", () => {
       Array.from({ length: FILAS_MAX / 1000 + 5 }, () => ({ data: lleno, error: null })),
     );
 
-    await exportarInventarioCsv();
+    await exportarInventario({});
 
     expect(range).toHaveBeenCalledTimes(FILAS_MAX / 1000);
   });
@@ -95,8 +99,36 @@ describe("exportarInventarioCsv", () => {
   it("oculta el detalle de un fallo de la base", async () => {
     sesion({ id: "u1" }, [{ data: null, error: { code: "XX000" } }]);
 
-    const r = await exportarInventarioCsv();
+    const r = await exportarInventario({});
 
     expect(r).toEqual({ ok: false, error: "No se pudo generar la exportación." });
+  });
+
+  it("rechaza un formato no permitido sin consultar la base", async () => {
+    const { cliente } = sesion({ id: "u1" }, []);
+
+    const r = await exportarInventario({ formato: "pdf" });
+
+    expect(r).toEqual({ ok: false, error: "El formato debe ser csv o xlsx." });
+    expect(cliente.from).not.toHaveBeenCalled();
+  });
+
+  it("entrega un CSV con su tipo y nombre", async () => {
+    sesion({ id: "u1" }, [{ data: [fila("A")], error: null }]);
+
+    const r = await exportarInventario({ formato: "csv" });
+
+    expect(r.ok && r.archivo).toMatchObject({ tipo: "text/csv; charset=utf-8", nombre: "inventario.csv" });
+  });
+
+  it("entrega un xlsx con su tipo y nombre", async () => {
+    sesion({ id: "u1" }, [{ data: [fila("A")], error: null }]);
+
+    const r = await exportarInventario({ formato: "xlsx" });
+
+    expect(r.ok && r.archivo.nombre).toBe("inventario.xlsx");
+    expect(r.ok && r.archivo.tipo).toContain("spreadsheetml.sheet");
+    // Un .xlsx es un ZIP: empieza con la firma «PK».
+    expect(r.ok && (r.archivo.contenido as Uint8Array).slice(0, 2)).toEqual(new Uint8Array([0x50, 0x4b]));
   });
 });
