@@ -50,6 +50,12 @@ export default async function ColeccionPage({
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           {total === 1 ? "1 registro" : `${total} registros`} en tu inventario
         </p>
+        {total > 0 && (
+          // Es una descarga, no una ruta de la aplicación: un <a> evita la precarga de next/link.
+          <a href="/coleccion/exportar" download className="text-sm underline">
+            Descargar inventario (CSV)
+          </a>
+        )}
       </header>
 
       {filas.length === 0 ? (
