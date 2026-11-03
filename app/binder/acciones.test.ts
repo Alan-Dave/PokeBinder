@@ -21,6 +21,7 @@ import {
   colocarCartaAccion,
   crearBinderAccion,
   eliminarBinderAccion,
+  moverCartaAccion,
   quitarCartaAccion,
 } from "./acciones";
 
@@ -135,6 +136,45 @@ describe("colocarCartaAccion", () => {
 
     expect(estado.exito).toBe(false);
     expect(estado.error).toContain("todas tus copias");
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+});
+
+describe("moverCartaAccion", () => {
+  const campos = { binderId: "3", pagina: "1", desde: "0", hasta: "1" };
+
+  it("mueve la carta y refresca el binder", async () => {
+    sesion();
+
+    const estado = await moverCartaAccion(INICIAL, formulario(campos));
+
+    expect(estado).toEqual({ error: null, exito: true });
+    expect(revalidatePath).toHaveBeenCalledWith("/binder/3");
+  });
+
+  it.each([
+    ["origen y destino iguales", { ...campos, hasta: "0" }],
+    ["destino fuera de la cuadrícula más grande", { ...campos, hasta: "16" }],
+    ["binder manipulado", { ...campos, binderId: "1 OR 1=1" }],
+    ["campos ausentes", {}],
+  ])("rechaza %s sin tocar la base", async (_, entrada) => {
+    const cliente = sesion();
+
+    const estado = await moverCartaAccion(INICIAL, formulario(entrada));
+
+    expect(estado.exito).toBe(false);
+    expect(estado.error).toBeTruthy();
+    expect(cliente.from).not.toHaveBeenCalled();
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("devuelve el error de la base sin refrescar", async () => {
+    sesion({ error: { code: "23505" } });
+
+    const estado = await moverCartaAccion(INICIAL, formulario(campos));
+
+    expect(estado.exito).toBe(false);
+    expect(estado.error).toContain("ocupada");
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 });
