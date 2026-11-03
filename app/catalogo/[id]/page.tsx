@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import AgregarAlInventario from "@/components/AgregarAlInventario";
 import VisorImagen from "@/components/VisorImagen";
 import { obtenerCarta, urlsImagenesOpcionales } from "@/lib/catalogo";
+import { describirVariantes } from "@/lib/variantes";
 import { idDesdeRuta } from "@/lib/validators/catalogo";
 import { CANTIDAD_MAX, CANTIDAD_MIN } from "@/lib/validators/inventario";
 
@@ -54,7 +55,7 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
     ...(carta.stage ? [["Etapa", carta.stage] as [string, string]] : []),
     ...(carta.rarity ? [["Rareza", carta.rarity] as [string, string]] : []),
     ...(carta.subtipos.length > 0 ? [["Subtipos", carta.subtipos.join(", ")] as [string, string]] : []),
-    ["Variantes", carta.variantes_disponibles.length > 0 ? carta.variantes_disponibles.join(", ") : "Ninguna"],
+    ["Variantes", describirVariantes(carta.variantes_disponibles)],
   ];
 
   return (

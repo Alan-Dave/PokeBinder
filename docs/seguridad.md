@@ -54,6 +54,8 @@ proyecto; ninguna quedó sin RLS.
 | `inventario` | Activa | `for all`, restringida a `usuario_id = auth.uid()` | Ambos |
 | `mazos` | Activa | `for all`, restringida a `usuario_id = auth.uid()` | Ambos |
 | `mazo_cartas` | Activa | `for all`, vía subconsulta a `mazos` (el mazo debe ser del usuario) | Ambos |
+| `binders` | Activa | `for all`, restringida a `usuario_id = auth.uid()` ([`binders.sql`](../supabase/migrations/20261102120000_binders.sql)) | Ambos. La cuadrícula (2x2, 3x3, 3x4, 4x4) y las páginas (1 a 100) las limita un `check` |
+| `binder_casillas` | Activa | `for all`, vía subconsulta a `binders` (el binder debe ser del usuario) | Ambos. El `with check` exige además que la carta sea de **su** `inventario`; sin eso se podría colocar la fila de inventario de otro. Un trigger valida que la casilla quepa en la cuadrícula y en las páginas |
 | `auditoria` | Activa | Ninguna política, para ningún comando | Más estricto que la regla: ni siquiera se intenta permitir un caso. Solo escriben funciones `security definer` |
 
 **Por qué las políticas de solo lectura no llevan `with check`:** `with check`
