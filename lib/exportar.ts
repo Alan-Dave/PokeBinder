@@ -1,9 +1,8 @@
 import "server-only";
 
-import { aCsv } from "@/lib/csv";
+import { type Archivo, construirArchivo } from "@/lib/archivo";
 import { createClient } from "@/lib/supabase/server";
 import { exportarInventarioSchema } from "@/lib/validators/exportar";
-import { aXlsx } from "@/lib/xlsx";
 
 /**
  * Exportación del inventario del usuario a CSV o Excel (PBI-22).
@@ -14,7 +13,6 @@ import { aXlsx } from "@/lib/xlsx";
  * por consulta.
  */
 
-export type Archivo = { contenido: string | Uint8Array; tipo: string; nombre: string };
 export type ResultadoExportacion = { ok: true; archivo: Archivo } | { ok: false; error: string };
 
 export const SIN_SESION = "Se requiere una sesión iniciada.";
@@ -60,18 +58,6 @@ export async function exportarInventario(entrada: unknown): Promise<ResultadoExp
 
   const tabla = filas.map((f) => [f.cartas?.id_api, f.cartas?.nombre, f.cartas?.idioma, f.variante, f.cantidad]);
 
-  if (validado.data.formato === "xlsx") {
-    return {
-      ok: true,
-      archivo: {
-        contenido: await aXlsx("Inventario", ENCABEZADOS, tabla),
-        tipo: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        nombre: "inventario.xlsx",
-      },
-    };
-  }
-  return {
-    ok: true,
-    archivo: { contenido: aCsv(ENCABEZADOS, tabla), tipo: "text/csv; charset=utf-8", nombre: "inventario.csv" },
-  };
+  const archivo = await construirArchivo(validado.data.formato, "inventario", "Inventario", ENCABEZADOS, tabla);
+  return { ok: true, archivo };
 }
