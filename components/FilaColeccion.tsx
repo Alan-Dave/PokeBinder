@@ -16,9 +16,11 @@ type Props = {
   // Los límites vienen de la página (servidor) para no cargar zod en el navegador.
   min: number;
   max: number;
+  // Precio unitario ya formateado, calculado en el servidor; null si no hay.
+  precio?: string | null;
 };
 
-export default function FilaColeccion({ fila, min, max }: Props) {
+export default function FilaColeccion({ fila, min, max, precio }: Props) {
   const [estadoGuardar, guardar, guardando] = useActionState(guardarCantidadAccion, INICIAL);
   const [estadoEliminar, eliminar, eliminando] = useActionState(eliminarAccion, INICIAL);
   const [confirmando, setConfirmando] = useState(false);
@@ -34,6 +36,9 @@ export default function FilaColeccion({ fila, min, max }: Props) {
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             {fila.cartas ? `${fila.cartas.id_api} · ${fila.cartas.idioma} · ` : ""}
             {etiquetaVariante(fila.variante)}
+          </p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            {precio ? `Precio de mercado: ${precio} c/u` : "Sin precio disponible"}
           </p>
         </div>
 
