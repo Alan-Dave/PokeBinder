@@ -1,10 +1,12 @@
 import "server-only";
 
+import { extraerPrecios, type PreciosCarta } from "@/lib/precios";
 import {
   idApiSchema,
   respuestaCartaTcgdexSchema,
   type IdiomaTcgdex,
 } from "@/lib/validators/imagen-hd";
+import { respuestaPreciosTcgdexSchema } from "@/lib/validators/precios";
 
 /**
  * Cliente mínimo de TCGdex (PBI-x2).
@@ -135,4 +137,27 @@ export async function descargarImagenAltaDefinicion(
   const imagen = await pedir(urlImagen, BYTES_MAXIMOS_IMAGEN);
   if (!imagen || !esWebp(imagen)) return null;
   return imagen;
+}
+
+/**
+ * Pide a TCGdex el precio de mercado (TCGplayer, USD) de una carta. Devuelve
+ * null si la carta no existe en ese idioma, la respuesta no es válida o no hay
+ * precio: quien llama muestra "sin precio disponible", nunca 0.
+ */
+export async function descargarPrecios(idioma: IdiomaTcgdex, idApi: string): Promise<PreciosCarta | null> {
+  const url = urlCarta(idioma, idApi);
+  if (!url) return null;
+
+  const json = await pedir(url, BYTES_MAXIMOS_JSON);
+  if (!json) return null;
+
+  let datos: unknown;
+  try {
+    datos = JSON.parse(new TextDecoder().decode(json));
+  } catch {
+    return null;
+  }
+  const carta = respuestaPreciosTcgdexSchema.safeParse(datos);
+  if (!carta.success) return null;
+  return extraerPrecios(carta.data.pricing?.tcgplayer);
 }
