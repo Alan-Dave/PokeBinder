@@ -27,6 +27,9 @@ export default async function Home() {
             <Link href="/binder" className="underline">
               Mis binders
             </Link>
+            <Link href="/dashboard" className="underline">
+              Dashboard
+            </Link>
             <Link href="/reportes" className="underline">
               Reportes
             </Link>
