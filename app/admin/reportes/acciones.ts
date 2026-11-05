@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { EstadoAccion } from "@/app/coleccion/tipos";
-import { cambiarEstadoReporte, crearReporte } from "@/lib/reportes";
+import { cambiarEstadoReporte, crearReporte } from "@/lib/reportes-catalogo";
 
 /**
  * Una Server Action es un endpoint público: la validación, la sesión y los

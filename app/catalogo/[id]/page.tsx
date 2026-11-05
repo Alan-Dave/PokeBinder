@@ -7,7 +7,7 @@ import { obtenerCarta, urlsImagenesOpcionales } from "@/lib/catalogo";
 import { describirVariantes } from "@/lib/variantes";
 import { idDesdeRuta } from "@/lib/validators/catalogo";
 import { CANTIDAD_MAX, CANTIDAD_MIN } from "@/lib/validators/inventario";
-import { DETALLE_MAX, DETALLE_MIN, ETIQUETAS_MOTIVO, MOTIVOS_REPORTE } from "@/lib/validators/reportes";
+import { DETALLE_MAX, DETALLE_MIN, ETIQUETAS_MOTIVO, MOTIVOS_REPORTE } from "@/lib/validators/reportes-catalogo";
 
 // Las URLs firmadas de las imágenes caducan: nunca se sirve desde caché.
 export const dynamic = "force-dynamic";

@@ -4,7 +4,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 
 import { createClient } from "@/lib/supabase/server";
-import { cambiarEstadoReporte, crearReporte, listarReportes, puedeRevisarReportes, SIN_SESION } from "./reportes";
+import { cambiarEstadoReporte, crearReporte, listarReportes, puedeRevisarReportes, SIN_SESION } from "./reportes-catalogo";
 
 type Resp = { data?: unknown; error?: { code?: string } | null };
 

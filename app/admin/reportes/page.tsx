@@ -1,7 +1,7 @@
 import Link from "next/link";
 import CerrarReporte from "@/components/CerrarReporte";
-import { listarReportes, puedeRevisarReportes, SIN_SESION } from "@/lib/reportes";
-import { ETIQUETAS_MOTIVO, ESTADOS_REPORTE, type EstadoReporte } from "@/lib/validators/reportes";
+import { listarReportes, puedeRevisarReportes, SIN_SESION } from "@/lib/reportes-catalogo";
+import { ETIQUETAS_MOTIVO, ESTADOS_REPORTE, type EstadoReporte } from "@/lib/validators/reportes-catalogo";
 
 // Depende de la sesión y cambia con cada revisión: nunca se sirve desde caché.
 export const dynamic = "force-dynamic";

@@ -7,7 +7,7 @@ import {
   listarReportesSchema,
   type EstadoReporte,
   type MotivoReporte,
-} from "@/lib/validators/reportes";
+} from "@/lib/validators/reportes-catalogo";
 
 /**
  * Reportes de errores del catálogo (PBI-31).

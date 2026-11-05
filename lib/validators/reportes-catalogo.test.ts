@@ -5,7 +5,7 @@ import {
   DETALLE_MAX,
   DETALLE_MIN,
   listarReportesSchema,
-} from "./reportes";
+} from "./reportes-catalogo";
 
 const valido = { cartaId: 5, motivo: "nombre", detalle: "El nombre tiene una errata" };
 

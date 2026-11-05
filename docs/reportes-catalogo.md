@@ -29,7 +29,7 @@ Es dato de usuario, así que las reglas viven en la base (RLS con `using` y
   reescribe lo que dijo el usuario.
 - Anti-abuso: un solo reporte abierto por usuario, carta y motivo (índice único
   parcial) y un máximo de 20 reportes por usuario cada 24 horas (trigger).
-- Toda entrada pasa por zod (`lib/validators/reportes.ts`) antes de tocar la base.
+- Toda entrada pasa por zod (`lib/validators/reportes-catalogo.ts`) antes de tocar la base.
   Los mismos límites están como `check` en la tabla.
 - El rol se verifica en la base (RLS). `puedeRevisarReportes` solo decide qué
   pantalla mostrar; si alguien llamara a la acción directamente, RLS no le deja

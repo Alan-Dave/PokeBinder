@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { reportarErrorAccion } from "@/app/reportes/acciones";
+import { reportarErrorAccion } from "@/app/admin/reportes/acciones";
 import type { EstadoAccion } from "@/app/coleccion/tipos";
 
 const INICIAL: EstadoAccion = { error: null, exito: false };
