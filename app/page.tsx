@@ -20,9 +20,17 @@ export default async function Home() {
           Catálogo
         </Link>
         {perfil && (
-          <Link href="/coleccion" className="underline">
-            Mi colección
-          </Link>
+          <>
+            <Link href="/coleccion" className="underline">
+              Mi colección
+            </Link>
+            <Link href="/binder" className="underline">
+              Mis binders
+            </Link>
+            <Link href="/mazos" className="underline">
+              Mis mazos
+            </Link>
+          </>
         )}
       </nav>
 

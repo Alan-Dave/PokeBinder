@@ -1,0 +1,107 @@
+# Reglas SAST propias de PokeBinder.
+#
+# Convierten en verificación automática las reglas de arquitectura que hoy
+# solo están escritas (docs/seguridad.md y los comentarios de lib/). Corren en
+# el pipeline junto a los rulesets públicos de Semgrep; cualquier hallazgo
+# deja el PR en rojo.
+rules:
+  - id: pokebinder-consulta-sin-validar
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      Consulta a Supabase sin validar antes la entrada con zod. Toda función
+      que recibe `entrada: unknown` debe llamar a <schema>.safeParse(entrada)
+      antes de tocar la base: las Server Actions son endpoints públicos y
+      reciben cualquier cosa.
+    metadata:
+      cwe: 'CWE-20: Improper Input Validation'
+      owasp: 'A03:2021 - Injection'
+    patterns:
+      - pattern-inside: |
+          export async function $F($ENTRADA: unknown, ...) { ... }
+      - pattern-either:
+          - pattern: $SB.from($TABLA)
+          - pattern: $SB.rpc(...)
+      - pattern-not-inside: |
+          export async function $F($ENTRADA: unknown, ...) {
+            ...
+            const $V = $SCHEMA.safeParse($ENTRADA);
+            ...
+          }
+    paths:
+      include: ['lib/']
+
+  - id: pokebinder-supabase-fuera-de-lib
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      Las páginas, Server Actions y componentes no acceden a Supabase
+      directamente: pasan por las funciones de lib/, que validan la entrada,
+      comprueban la sesión y traducen los errores sin filtrar detalles.
+    metadata:
+      cwe: 'CWE-20: Improper Input Validation'
+    patterns:
+      - pattern-either:
+          - pattern: import $X from "$MOD"
+          - pattern: import { $X } from "$MOD"
+          - pattern: import * as $X from "$MOD"
+      - metavariable-regex:
+          metavariable: $MOD
+          regex: ^(@/|(\.\./)+)lib/supabase/
+    paths:
+      include: ['app/', 'components/']
+      # Las pruebas importan el cliente solo para reemplazarlo con vi.mock.
+      exclude: ['*.test.ts']
+
+  - id: pokebinder-cliente-admin-acotado
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      createAdminClient() usa la clave secreta y se salta RLS. Su uso está
+      acotado a firmar URLs de Storage en lib/imagenes.ts (docs/seguridad.md).
+    metadata:
+      cwe: 'CWE-250: Execution with Unnecessary Privileges'
+      owasp: 'A01:2021 - Broken Access Control'
+    pattern: createAdminClient()
+    paths:
+      exclude: ['/lib/imagenes.ts', '/lib/supabase/admin.ts']
+
+  - id: pokebinder-secreto-en-variable-publica
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      Las variables NEXT_PUBLIC_* se incrustan en el bundle del navegador.
+      Un secreto nunca puede llevar ese prefijo.
+    metadata:
+      cwe: 'CWE-200: Exposure of Sensitive Information'
+    patterns:
+      - pattern: process.env.$VAR
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: ^NEXT_PUBLIC_.*(SECRET|SERVICE_ROLE|PASSWORD|DB_URL).*$
+
+  - id: pokebinder-html-sin-escapar
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      HTML insertado sin escapar (XSS). React ya escapa el texto de {valor};
+      no usar dangerouslySetInnerHTML ni asignar innerHTML.
+    metadata:
+      cwe: 'CWE-79: Cross-site Scripting'
+      owasp: 'A03:2021 - Injection'
+    pattern-either:
+      - pattern: <$EL dangerouslySetInnerHTML={...} />
+      - pattern: <$EL dangerouslySetInnerHTML={...}>...</$EL>
+      - pattern: $X.innerHTML = $Y
+      - pattern: $X.outerHTML = $Y
+      - pattern: document.write(...)
+
+  - id: pokebinder-ejecucion-dinamica
+    languages: [typescript]
+    severity: ERROR
+    message: Ejecución dinámica de código (eval / new Function).
+    metadata:
+      cwe: 'CWE-95: Eval Injection'
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: new Function(...)
