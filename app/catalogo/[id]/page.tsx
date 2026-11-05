@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AgregarAlInventario from "@/components/AgregarAlInventario";
+import ReportarError from "@/components/ReportarError";
 import VisorImagen from "@/components/VisorImagen";
 import { obtenerCarta, urlsImagenesOpcionales } from "@/lib/catalogo";
 import { registrarPrecios } from "@/lib/historial-precios";
@@ -9,6 +10,7 @@ import { obtenerPreciosCartas } from "@/lib/precios-carta";
 import { describirVariantes } from "@/lib/variantes";
 import { idDesdeRuta } from "@/lib/validators/catalogo";
 import { CANTIDAD_MAX, CANTIDAD_MIN } from "@/lib/validators/inventario";
+import { DETALLE_MAX, DETALLE_MIN, ETIQUETAS_MOTIVO, MOTIVOS_REPORTE } from "@/lib/validators/reportes-catalogo";
 
 // Las URLs firmadas de las imágenes caducan: nunca se sirve desde caché.
 export const dynamic = "force-dynamic";
@@ -129,6 +131,13 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
               max={CANTIDAD_MAX}
             />
           </div>
+
+          <ReportarError
+            cartaId={carta.id}
+            motivos={MOTIVOS_REPORTE.map((valor) => ({ valor, etiqueta: ETIQUETAS_MOTIVO[valor] }))}
+            detalleMin={DETALLE_MIN}
+            detalleMax={DETALLE_MAX}
+          />
         </div>
       </div>
     </main>
