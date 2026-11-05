@@ -58,9 +58,14 @@ export function etiquetaAcabado(acabado: string): string {
   return ETIQUETAS_ACABADO[acabado] ?? acabado;
 }
 
+/** Acabado de TCGplayer equivalente a una variante del catálogo, o null si no hay. */
+export function acabadoDeVariante(variante: string): string | null {
+  return ACABADO_DE_VARIANTE[variante] ?? null;
+}
+
 /** Precio de mercado del acabado que corresponde a la variante, o null. */
 export function precioDeVariante(precios: PreciosCarta | null | undefined, variante: string): number | null {
-  const acabado = ACABADO_DE_VARIANTE[variante];
+  const acabado = acabadoDeVariante(variante);
   if (!precios || !acabado) return null;
   return precios.acabados.find((a) => a.acabado === acabado)?.mercado ?? null;
 }

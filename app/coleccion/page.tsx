@@ -1,6 +1,7 @@
 import Link from "next/link";
 import FilaColeccion from "@/components/FilaColeccion";
 import { listarInventario, SIN_SESION, TAMANO_PAGINA } from "@/lib/inventario";
+import { registrarPrecios } from "@/lib/historial-precios";
 import { formatearUsd, precioDeVariante, valorDeColeccion } from "@/lib/precios";
 import { obtenerPreciosCartas } from "@/lib/precios-carta";
 import { CANTIDAD_MAX, CANTIDAD_MIN } from "@/lib/validators/inventario";
@@ -48,6 +49,13 @@ export default async function ColeccionPage({
   // Precios solo de las cartas de esta página (una página tiene como mucho 30).
   const cartasDePagina = filas.flatMap((f) => (f.cartas ? [{ idApi: f.cartas.id_api, idioma: f.cartas.idioma }] : []));
   const precios = await obtenerPreciosCartas(cartasDePagina);
+  // Un precio por carta y día para el gráfico de evolución (PBI-30).
+  await registrarPrecios(
+    filas.flatMap((f) => {
+      const p = f.cartas ? precios.get(f.cartas.id_api) : null;
+      return p ? [{ cartaId: f.carta_id, acabados: p.acabados.map((a) => ({ acabado: a.acabado, mercado: a.mercado })) }] : [];
+    }),
+  );
   const preciosDeFila = filas.map((f) => (f.cartas ? precioDeVariante(precios.get(f.cartas.id_api), f.variante) : null));
   const textosPrecio = preciosDeFila.map((p) => (p === null ? null : formatearUsd(p)));
   const valor = valorDeColeccion(filas.map((f, i) => ({ precio: preciosDeFila[i], cantidad: f.cantidad })));
@@ -63,7 +71,10 @@ export default async function ColeccionPage({
           <p className="text-sm">
             Valor estimado de esta página: <strong>{formatearUsd(valor.total)}</strong>
             {valor.sinPrecio > 0 && ` (sin contar ${valor.sinPrecio} sin precio)`}. Referencia de TCGplayer en
-            dólares, no una oferta.
+            dólares, no una oferta.{" "}
+            <Link href="/coleccion/evolucion" className="underline">
+              Ver evolución del valor
+            </Link>
           </p>
         )}
       </header>
