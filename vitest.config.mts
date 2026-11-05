@@ -14,7 +14,7 @@ export default defineConfig({
       // Lógica que valida y decide: validadores, capa de servidor y Server
       // Actions. Las páginas y los clientes de Supabase quedan fuera porque
       // necesitan un navegador o una base real para ejecutarse.
-      include: ["lib/validators/**/*.ts", "lib/cobertura.ts", "lib/inventario.ts", "lib/reglas-mazo.ts", "lib/precios.ts", "lib/precios-carta.ts", "app/**/acciones.ts"],
+      include: ["lib/validators/**/*.ts", "lib/cobertura.ts", "lib/inventario.ts", "lib/reglas-mazo.ts", "lib/precios.ts", "lib/precios-carta.ts", "lib/evolucion.ts", "lib/evolucion-valor.ts", "lib/historial-precios.ts", "app/**/acciones.ts"],
       exclude: ["**/*.test.ts"],
       reporter: ["text", "cobertura", "html"],
       // Bajar de estos valores deja el pipeline en rojo.

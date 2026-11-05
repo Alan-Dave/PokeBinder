@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import AgregarAlInventario from "@/components/AgregarAlInventario";
 import VisorImagen from "@/components/VisorImagen";
 import { obtenerCarta, urlsImagenesOpcionales } from "@/lib/catalogo";
+import { registrarPrecios } from "@/lib/historial-precios";
 import { etiquetaAcabado, formatearUsd } from "@/lib/precios";
 import { obtenerPreciosCartas } from "@/lib/precios-carta";
 import { describirVariantes } from "@/lib/variantes";
@@ -48,6 +49,8 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
   const imagenes = await urlsImagenesOpcionales([carta.id]);
   const url = imagenes[carta.id];
   const precios = (await obtenerPreciosCartas([{ idApi: carta.id_api, idioma: carta.idioma }])).get(carta.id_api) ?? null;
+  // Un precio por carta y día para el gráfico de evolución (PBI-30).
+  if (precios) await registrarPrecios([{ cartaId: carta.id, acabados: precios.acabados }]);
 
   // Solo se listan los datos que la carta tiene: una fila vacía no informa nada.
   const datos: [string, string][] = [
