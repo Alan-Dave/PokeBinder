@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NOMBRES_IDIOMA } from "@/lib/etiquetas-idioma";
 import { obtenerFaltantes, obtenerResumenInventario, SIN_SESION } from "@/lib/reportes";
 import { IDIOMAS } from "@/lib/validators/catalogo";
 
@@ -10,15 +11,6 @@ export const metadata = { title: "Reportes · PokeBinder" };
 const CAMPO = "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
 const BOTON =
   "rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800";
-
-const NOMBRES_IDIOMA: Record<(typeof IDIOMAS)[number], string> = {
-  en: "Inglés",
-  es: "Español",
-  fr: "Francés",
-  pt: "Portugués",
-  ja: "Japonés",
-  zh: "Chino",
-};
 
 // Los dos reportes comparten la URL: cada uno conserva los parámetros del otro.
 // Los del resumen llevan prefijo «filtro» para no chocar con los de faltantes.
