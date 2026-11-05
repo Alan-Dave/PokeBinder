@@ -8,6 +8,7 @@ import {
   cuadriculaDe,
   dimensionesDe,
   eliminarBinderSchema,
+  moverCartaSchema,
   obtenerBinderSchema,
   quitarCartaSchema,
   type Cuadricula,
@@ -57,6 +58,8 @@ export type BinderConPagina = {
 export const SIN_SESION = "Se requiere una sesión iniciada.";
 // Mismo mensaje si el binder no existe o es de otro usuario (RLS lo oculta).
 const NO_ENCONTRADO = "El binder no existe o no te pertenece.";
+
+const CASILLA_OCUPADA = "Esa casilla ya está ocupada. Quita su carta o elige una casilla vacía.";
 
 const MENSAJES: Record<string, string> = {
   "23505": "Ya tienes un binder con ese nombre.",
@@ -200,6 +203,36 @@ export async function colocarCarta(entrada: unknown): Promise<Resultado<null>> {
     );
 
   if (error) return { ok: false, error: traducirError(error.code, "colocar", error) };
+  return { ok: true, datos: null };
+}
+
+export async function moverCarta(entrada: unknown): Promise<Resultado<null>> {
+  const validado = moverCartaSchema.safeParse(entrada);
+  if (!validado.success) return { ok: false, error: validado.error.issues[0].message };
+
+  const { supabase, user } = await usuarioActual();
+  if (!user) return { ok: false, error: SIN_SESION };
+
+  const { binderId, pagina, desde, hasta } = validado.data;
+  // Cambiar solo la posición no toca inventario_id: no cambia cuántas copias
+  // están en uso. Si el destino está ocupado, la clave primaria (23505) lo
+  // rechaza: mover nunca reemplaza ni borra otra carta.
+  const { data, error } = await supabase
+    .from("binder_casillas")
+    .update({ posicion: hasta })
+    .eq("binder_id", binderId)
+    .eq("pagina", pagina)
+    .eq("posicion", desde)
+    .select("posicion")
+    .maybeSingle();
+
+  if (error) {
+    return {
+      ok: false,
+      error: error.code === "23505" ? CASILLA_OCUPADA : traducirError(error.code, "mover", error),
+    };
+  }
+  if (!data) return { ok: false, error: "La casilla de origen está vacía." };
   return { ok: true, datos: null };
 }
 

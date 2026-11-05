@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { colocarCartaAccion, quitarCartaAccion } from "@/app/binder/acciones";
 import type { EstadoAccion } from "@/app/coleccion/tipos";
+import { useCartaArrastrable, useCasillaSoltable } from "@/components/TableroBinder";
 import { etiquetaVariante } from "@/lib/variantes";
 
 const INICIAL: EstadoAccion = { error: null, exito: false };
@@ -10,7 +11,12 @@ const INICIAL: EstadoAccion = { error: null, exito: false };
 const BOTON =
   "rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800";
 
-type Carta = { nombre: string; idApi: string; variante: string; imagenUrl: string | null };
+type Carta = {
+  nombre: string;
+  idApi: string;
+  variante: string;
+  imagenUrl: string | null;
+};
 type Opcion = { id: number; variante: string; nombre: string; idApi: string };
 
 type Props = {
@@ -26,12 +32,37 @@ export default function CasillaBinder({ binderId, pagina, posicion, carta, opcio
   const [estadoQuitar, quitar, quitando] = useActionState(quitarCartaAccion, INICIAL);
   const error = estadoColocar.error ?? estadoQuitar.error;
   const idSelect = `casilla-${pagina}-${posicion}`;
+  const { setNodeRef: soltable, isOver } = useCasillaSoltable(posicion);
+  const {
+    attributes,
+    listeners,
+    setNodeRef: arrastrable,
+    isDragging,
+  } = useCartaArrastrable(
+    posicion,
+    carta ? `${carta.nombre} · ${etiquetaVariante(carta.variante)}` : "",
+    carta !== null,
+  );
 
   return (
-    <li className="flex aspect-[5/7] flex-col gap-2 overflow-hidden rounded-lg border border-zinc-200 p-2 text-sm dark:border-zinc-800">
+    <li
+      ref={soltable}
+      className={`flex aspect-[5/7] flex-col gap-2 overflow-hidden rounded-lg border p-2 text-sm ${
+        isOver ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "border-zinc-200 dark:border-zinc-800"
+      }`}
+    >
       {carta ? (
         <>
-          <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded bg-zinc-100 dark:bg-zinc-900">
+          {/* Solo la imagen se arrastra: los botones de la casilla siguen siendo clicables. */}
+          <div
+            ref={arrastrable}
+            {...attributes}
+            {...listeners}
+            aria-label={`Arrastrar ${carta.nombre} a otra casilla`}
+            className={`flex min-h-0 flex-1 cursor-grab touch-none items-center justify-center overflow-hidden rounded bg-zinc-100 dark:bg-zinc-900 ${
+              isDragging ? "opacity-40" : ""
+            }`}
+          >
             {carta.imagenUrl ? (
               // La URL está firmada y caduca: next/image la cachearía vencida.
               // eslint-disable-next-line @next/next/no-img-element
