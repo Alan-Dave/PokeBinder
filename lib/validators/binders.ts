@@ -88,4 +88,14 @@ export const quitarCartaSchema = z.object({
   posicion,
 });
 
+// Mover una carta dentro de la misma página: origen y destino son casillas distintas.
+export const moverCartaSchema = z
+  .object({
+    binderId: id("El binder"),
+    pagina,
+    desde: posicion,
+    hasta: posicion,
+  })
+  .refine((v) => v.desde !== v.hasta, { error: "La casilla de origen y la de destino son la misma.", path: ["hasta"] });
+
 export type CrearBinderInput = z.infer<typeof crearBinderSchema>;
