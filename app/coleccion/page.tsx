@@ -77,6 +77,17 @@ export default async function ColeccionPage({
             </Link>
           </p>
         )}
+        {total > 0 && (
+          // Es una descarga, no una ruta de la aplicación: un <a> evita la precarga de next/link.
+          <p className="flex gap-4 text-sm">
+            <a href="/coleccion/exportar?formato=csv" download className="underline">
+              Descargar CSV
+            </a>
+            <a href="/coleccion/exportar?formato=xlsx" download className="underline">
+              Descargar Excel
+            </a>
+          </p>
+        )}
       </header>
 
       {filas.length === 0 ? (

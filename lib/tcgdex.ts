@@ -142,7 +142,6 @@ export async function descargarImagenAltaDefinicion(
 }
 
 /**
-/**
  * Pide a TCGdex la legalidad de una carta (campo "legal"). Devuelve null si la
  * carta no existe en ese idioma, la respuesta no es válida o TCGdex no informó
  * ningún formato: quien llama lo trata como «no verificable», nunca como legal.
