@@ -10,11 +10,12 @@ export async function GET(solicitud: Request) {
   const resultado = await exportarFaltantes({
     setId: parametros.get("setId") ?? undefined,
     idioma: parametros.get("idioma") ?? undefined,
+    rareza: parametros.get("rareza") ?? undefined,
     formato: parametros.get("formato") ?? undefined,
   });
 
   if (!resultado.ok) {
-    const estado = resultado.error === SIN_SESION ? 401 : resultado.error.startsWith("No existe") ? 404 : resultado.error.startsWith("No se pudo") ? 500 : 400;
+    const estado = resultado.error === SIN_SESION ? 401 : resultado.error.startsWith("No existe") || resultado.error.startsWith("No hay") ? 404 : resultado.error.startsWith("No se pudo") ? 500 : 400;
     return new Response(resultado.error, { status: estado });
   }
 
