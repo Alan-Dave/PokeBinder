@@ -16,11 +16,16 @@ export default async function BarraNavegacion() {
   const enlaces = enlacesDeNavegacion(perfil !== null, perfil?.rol ?? null);
 
   const sesion = perfil ? (
-    <form action={cerrarSesionAccion}>
-      <button type="submit" className="boton boton-neutro !py-1.5 text-base">
-        Cerrar sesión
-      </button>
-    </form>
+    <div className="flex items-center gap-2">
+      <Link href="/cuenta" className={ENLACE}>
+        Mi cuenta
+      </Link>
+      <form action={cerrarSesionAccion}>
+        <button type="submit" className="boton boton-neutro !py-1.5 text-base">
+          Cerrar sesión
+        </button>
+      </form>
+    </div>
   ) : (
     <div className="flex items-center gap-2">
       <Link href="/login" className={ENLACE}>
@@ -44,17 +49,17 @@ export default async function BarraNavegacion() {
         </Link>
 
         {/* Pantallas anchas */}
-        <nav aria-label="Principal" className="hidden items-center gap-1 md:flex">
+        <nav aria-label="Principal" className="hidden items-center gap-1 lg:flex">
           {enlaces.map((e) => (
             <Link key={e.href} href={e.href} className={ENLACE}>
               {e.texto}
             </Link>
           ))}
         </nav>
-        <div className="hidden md:block">{sesion}</div>
+        <div className="hidden lg:block">{sesion}</div>
 
         {/* Pantallas angostas */}
-        <details className="relative md:hidden">
+        <details className="relative lg:hidden">
           <summary className="boton boton-amarillo list-none !py-1.5 text-base">Menú</summary>
           <div className="tarjeta absolute right-0 mt-3 flex w-64 flex-col gap-1 p-3">
             <nav aria-label="Principal (móvil)" className="flex flex-col gap-1">

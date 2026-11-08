@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AgregarAlInventario from "@/components/AgregarAlInventario";
+import ComparadorPrecios from "@/components/ComparadorPrecios";
 import ReportarError from "@/components/ReportarError";
 import VisorImagen from "@/components/VisorImagen";
 import { listarCategorias } from "@/lib/categorias";
 import { obtenerCarta, urlsImagenesOpcionales } from "@/lib/catalogo";
 import { registrarPrecios } from "@/lib/historial-precios";
-import { etiquetaAcabado, formatearUsd } from "@/lib/precios";
 import { obtenerPreciosCartas } from "@/lib/precios-carta";
 import { describirVariantes } from "@/lib/variantes";
 import { idDesdeRuta } from "@/lib/validators/catalogo";
@@ -53,7 +53,8 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
   const categorias = listaCategorias.ok ? listaCategorias.datos.map((c) => ({ id: c.id, nombre: c.nombre })) : [];
   const imagenes = await urlsImagenesOpcionales([carta.id]);
   const url = imagenes[carta.id];
-  const precios = (await obtenerPreciosCartas([{ idApi: carta.id_api, idioma: carta.idioma }])).get(carta.id_api) ?? null;
+  const precios =
+    (await obtenerPreciosCartas([{ idApi: carta.id_api, idioma: carta.idioma }])).get(carta.id_api) ?? null;
   // Un precio por carta y día para el gráfico de evolución (PBI-30).
   if (precios) await registrarPrecios([{ cartaId: carta.id, acabados: precios.acabados }]);
 
@@ -77,12 +78,7 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
         <div className="flex aspect-[5/7] w-full max-w-md items-center justify-center overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-900">
-          <VisorImagen
-            url={url ?? null}
-            urlHd={`/api/cartas/${carta.id}/imagen-hd`}
-            alt={carta.nombre}
-          />
-
+          <VisorImagen url={url ?? null} urlHd={`/api/cartas/${carta.id}/imagen-hd`} alt={carta.nombre} />
         </div>
 
         <div className="flex flex-col gap-6">
@@ -100,29 +96,11 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
             ))}
           </dl>
 
-          <section aria-labelledby="precio-titulo" className="flex flex-col gap-2">
-            <h2 id="precio-titulo" className="text-lg font-medium">
-              Precio de mercado
+          <section aria-labelledby="precio-titulo" className="flex flex-col gap-3">
+            <h2 id="precio-titulo" className="text-2xl font-bold">
+              Comparador de precios
             </h2>
-            {precios ? (
-              <>
-                <ul className="flex flex-col gap-1 text-sm">
-                  {precios.acabados.map((a) => (
-                    <li key={a.acabado} className="flex justify-between gap-4">
-                      <span>{etiquetaAcabado(a.acabado)}</span>
-                      <span className="font-medium">{formatearUsd(a.mercado)}</span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                  Referencia de TCGplayer en dólares
-                  {precios.actualizado ? `, actualizada el ${precios.actualizado.slice(0, 10)}` : ""}. Es un valor
-                  orientativo, no una oferta.
-                </p>
-              </>
-            ) : (
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">Sin precio disponible para esta carta.</p>
-            )}
+            <ComparadorPrecios precios={precios} />
           </section>
 
           <div className="flex flex-col gap-2">
