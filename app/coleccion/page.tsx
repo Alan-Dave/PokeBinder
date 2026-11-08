@@ -1,6 +1,9 @@
 import Link from "next/link";
 import FilaColeccion from "@/components/FilaColeccion";
 import { listarInventario, SIN_SESION, TAMANO_PAGINA } from "@/lib/inventario";
+import { registrarPrecios } from "@/lib/historial-precios";
+import { formatearUsd, precioDeVariante, valorDeColeccion } from "@/lib/precios";
+import { obtenerPreciosCartas } from "@/lib/precios-carta";
 import { CANTIDAD_MAX, CANTIDAD_MIN } from "@/lib/validators/inventario";
 
 // Depende de la sesión del usuario: nunca se sirve desde una copia en caché.
@@ -43,6 +46,20 @@ export default async function ColeccionPage({
   const { filas, total } = resultado.datos;
   const totalPaginas = Math.max(1, Math.ceil(total / TAMANO_PAGINA));
 
+  // Precios solo de las cartas de esta página (una página tiene como mucho 30).
+  const cartasDePagina = filas.flatMap((f) => (f.cartas ? [{ idApi: f.cartas.id_api, idioma: f.cartas.idioma }] : []));
+  const precios = await obtenerPreciosCartas(cartasDePagina);
+  // Un precio por carta y día para el gráfico de evolución (PBI-30).
+  await registrarPrecios(
+    filas.flatMap((f) => {
+      const p = f.cartas ? precios.get(f.cartas.id_api) : null;
+      return p ? [{ cartaId: f.carta_id, acabados: p.acabados.map((a) => ({ acabado: a.acabado, mercado: a.mercado })) }] : [];
+    }),
+  );
+  const preciosDeFila = filas.map((f) => (f.cartas ? precioDeVariante(precios.get(f.cartas.id_api), f.variante) : null));
+  const textosPrecio = preciosDeFila.map((p) => (p === null ? null : formatearUsd(p)));
+  const valor = valorDeColeccion(filas.map((f, i) => ({ precio: preciosDeFila[i], cantidad: f.cantidad })));
+
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-8">
       <header className="flex flex-col gap-1">
@@ -50,6 +67,16 @@ export default async function ColeccionPage({
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           {total === 1 ? "1 registro" : `${total} registros`} en tu inventario
         </p>
+        {valor.conPrecio > 0 && (
+          <p className="text-sm">
+            Valor estimado de esta página: <strong>{formatearUsd(valor.total)}</strong>
+            {valor.sinPrecio > 0 && ` (sin contar ${valor.sinPrecio} sin precio)`}. Referencia de TCGplayer en
+            dólares, no una oferta.{" "}
+            <Link href="/coleccion/evolucion" className="underline">
+              Ver evolución del valor
+            </Link>
+          </p>
+        )}
         {total > 0 && (
           // Es una descarga, no una ruta de la aplicación: un <a> evita la precarga de next/link.
           <p className="flex gap-4 text-sm">
@@ -69,8 +96,14 @@ export default async function ColeccionPage({
         </p>
       ) : (
         <ul className="flex flex-col gap-3">
-          {filas.map((fila) => (
-            <FilaColeccion key={fila.id} fila={fila} min={CANTIDAD_MIN} max={CANTIDAD_MAX} />
+          {filas.map((fila, i) => (
+            <FilaColeccion
+              key={fila.id}
+              fila={fila}
+              min={CANTIDAD_MIN}
+              max={CANTIDAD_MAX}
+              precio={textosPrecio[i]}
+            />
           ))}
         </ul>
       )}
