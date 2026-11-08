@@ -20,15 +20,45 @@ export default async function Home() {
           Catálogo
         </Link>
         {perfil && (
-          <Link href="/coleccion" className="underline">
-            Mi colección
-          </Link>
+          <>
+            <Link href="/coleccion" className="underline">
+              Mi colección
+            </Link>
+            <Link href="/binder" className="underline">
+              Mis binders
+            </Link>
+            <Link href="/mazos" className="underline">
+              Mis mazos
+            </Link>
+            <Link href="/dashboard" className="underline">
+              Dashboard
+            </Link>
+            <Link href="/reportes" className="underline">
+              Reportes
+            </Link>
+            {/* Comodidad visual: el control real está en la base (regla 6). */}
+            {perfil.rol === "superusuario" && (
+              <>
+                <Link href="/admin/usuarios" className="underline">
+                  Usuarios y roles
+                </Link>
+                <Link href="/admin/auditoria" className="underline">
+                  Auditoría
+                </Link>
+              </>
+            )}
+          </>
         )}
       </nav>
 
       {perfil ? (
         <div className="flex flex-col items-center gap-3">
-          <p>Sesión iniciada como {perfil.nombreVisible ?? perfil.correo ?? "usuario"}.</p>
+          <p>
+            Sesión iniciada como {perfil.nombreVisible ?? perfil.correo ?? "usuario"}.{" "}
+            <Link href="/cuenta" className="underline">
+              Mi cuenta
+            </Link>
+          </p>
           <form action={cerrarSesionAccion}>
             <button
               type="submit"

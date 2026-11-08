@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AgregarAlInventario from "@/components/AgregarAlInventario";
+import ReportarError from "@/components/ReportarError";
 import VisorImagen from "@/components/VisorImagen";
 import { obtenerCarta, urlsImagenesOpcionales } from "@/lib/catalogo";
+import { registrarPrecios } from "@/lib/historial-precios";
+import { etiquetaAcabado, formatearUsd } from "@/lib/precios";
+import { obtenerPreciosCartas } from "@/lib/precios-carta";
+import { describirVariantes } from "@/lib/variantes";
 import { idDesdeRuta } from "@/lib/validators/catalogo";
 import { CANTIDAD_MAX, CANTIDAD_MIN } from "@/lib/validators/inventario";
+import { DETALLE_MAX, DETALLE_MIN, ETIQUETAS_MOTIVO, MOTIVOS_REPORTE } from "@/lib/validators/reportes-catalogo";
 
 // Las URLs firmadas de las imágenes caducan: nunca se sirve desde caché.
 export const dynamic = "force-dynamic";
@@ -44,6 +50,9 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
   const carta = resultado.datos;
   const imagenes = await urlsImagenesOpcionales([carta.id]);
   const url = imagenes[carta.id];
+  const precios = (await obtenerPreciosCartas([{ idApi: carta.id_api, idioma: carta.idioma }])).get(carta.id_api) ?? null;
+  // Un precio por carta y día para el gráfico de evolución (PBI-30).
+  if (precios) await registrarPrecios([{ cartaId: carta.id, acabados: precios.acabados }]);
 
   // Solo se listan los datos que la carta tiene: una fila vacía no informa nada.
   const datos: [string, string][] = [
@@ -54,7 +63,7 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
     ...(carta.stage ? [["Etapa", carta.stage] as [string, string]] : []),
     ...(carta.rarity ? [["Rareza", carta.rarity] as [string, string]] : []),
     ...(carta.subtipos.length > 0 ? [["Subtipos", carta.subtipos.join(", ")] as [string, string]] : []),
-    ["Variantes", carta.variantes_disponibles.length > 0 ? carta.variantes_disponibles.join(", ") : "Ninguna"],
+    ["Variantes", describirVariantes(carta.variantes_disponibles)],
   ];
 
   return (
@@ -88,6 +97,31 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
             ))}
           </dl>
 
+          <section aria-labelledby="precio-titulo" className="flex flex-col gap-2">
+            <h2 id="precio-titulo" className="text-lg font-medium">
+              Precio de mercado
+            </h2>
+            {precios ? (
+              <>
+                <ul className="flex flex-col gap-1 text-sm">
+                  {precios.acabados.map((a) => (
+                    <li key={a.acabado} className="flex justify-between gap-4">
+                      <span>{etiquetaAcabado(a.acabado)}</span>
+                      <span className="font-medium">{formatearUsd(a.mercado)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                  Referencia de TCGplayer en dólares
+                  {precios.actualizado ? `, actualizada el ${precios.actualizado.slice(0, 10)}` : ""}. Es un valor
+                  orientativo, no una oferta.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">Sin precio disponible para esta carta.</p>
+            )}
+          </section>
+
           <div className="flex flex-col gap-2">
             <h2 className="text-lg font-medium">Agregar a mi colección</h2>
             <AgregarAlInventario
@@ -97,6 +131,13 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
               max={CANTIDAD_MAX}
             />
           </div>
+
+          <ReportarError
+            cartaId={carta.id}
+            motivos={MOTIVOS_REPORTE.map((valor) => ({ valor, etiqueta: ETIQUETAS_MOTIVO[valor] }))}
+            detalleMin={DETALLE_MIN}
+            detalleMax={DETALLE_MAX}
+          />
         </div>
       </div>
     </main>
