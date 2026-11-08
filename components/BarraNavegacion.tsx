@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { cerrarSesionAccion } from "@/app/auth/acciones";
 import { obtenerPerfilActual } from "@/lib/auth";
@@ -35,12 +36,17 @@ export default async function BarraNavegacion() {
   return (
     <header className="sticky top-0 z-40 border-b-4 border-tinta bg-crema">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-        <Link href="/" className="flex items-center gap-2 font-titulo text-2xl font-extrabold">
-          <span
-            aria-hidden="true"
-            className="inline-block h-7 w-5 -rotate-6 rounded-md border-[3px] border-tinta bg-rojo shadow-[2px_2px_0_var(--tinta)]"
+        <Link href="/" className="flex items-center rounded-xl">
+          {/* El texto alternativo es el nombre accesible del enlace a la portada. */}
+          <Image
+            src="/logo.png"
+            alt="PokeBinder"
+            width={960}
+            height={426}
+            priority
+            sizes="136px"
+            className="h-12 w-auto sm:h-14"
           />
-          PokeBinder
         </Link>
 
         {/* Pantallas anchas */}
