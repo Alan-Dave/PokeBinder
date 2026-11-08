@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type MouseEvent, type PointerEvent, type WheelEvent } from "react";
+import { ImagenNoDisponible } from "@/components/ImagenConRespaldo";
 import { INCLINACION_NEUTRA, calcularInclinacion, type Inclinacion } from "@/lib/inclinacion";
 import { ZOOM_MIN, zoomPorClic, zoomPorRueda } from "@/lib/zoom";
 
@@ -21,6 +22,8 @@ export default function VisorImagen({ url, urlHd, alt }: Props) {
   // cada vez que alguien mira la ficha.
   const [abierto, setAbierto] = useState(false);
   const [hdFallo, setHdFallo] = useState(false);
+  // La miniatura del bucket puede fallar (URL firmada vencida): se reemplaza.
+  const [miniaturaFalla, setMiniaturaFalla] = useState(false);
   // El visor abre en 3D; el zoom sigue disponible para leer el texto de la carta.
   const [modo, setModo] = useState<"3d" | "zoom">("3d");
   const carta3d = useRef<HTMLDivElement>(null);
@@ -72,26 +75,22 @@ export default function VisorImagen({ url, urlHd, alt }: Props) {
 
   return (
     <>
-      {url ? (
-        <button
-          type="button"
-          onClick={abrir}
-          aria-label={`Ampliar la imagen de ${alt}`}
-          className="h-full w-full cursor-zoom-in"
-        >
-          {/* La URL está firmada y caduca: next/image la cachearía vencida. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={url} alt={alt} className="h-full w-full object-contain" />
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={abrir}
-          className="h-full w-full text-sm text-zinc-500 underline"
-        >
-          Sin imagen · ver en alta definición
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={abrir}
+        aria-label={url && !miniaturaFalla ? `Ampliar la imagen de ${alt}` : `Imagen no disponible. Ver ${alt} en alta definición`}
+        className="h-full w-full cursor-zoom-in"
+      >
+        {url && !miniaturaFalla ? (
+          <>
+            {/* La URL está firmada y caduca: next/image la cachearía vencida. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={url} alt={alt} onError={() => setMiniaturaFalla(true)} className="h-full w-full object-contain" />
+          </>
+        ) : (
+          <ImagenNoDisponible alt="" className="h-full w-full object-contain" />
+        )}
+      </button>
 
       <dialog
         ref={dialogo}
@@ -156,7 +155,7 @@ export default function VisorImagen({ url, urlHd, alt }: Props) {
                   />
                 </div>
               ) : (
-                <p className="p-4 text-sm text-zinc-500">No hay imagen disponible para esta carta.</p>
+                <ImagenNoDisponible alt="No hay imagen disponible para esta carta" className="max-h-[70vh] w-auto max-w-full rounded-[4.5%]" />
               )}
             </div>
           ) : (
@@ -178,7 +177,7 @@ export default function VisorImagen({ url, urlHd, alt }: Props) {
                   />
                 </button>
               ) : (
-                <p className="p-4 text-sm text-zinc-500">No hay imagen disponible para esta carta.</p>
+                <ImagenNoDisponible alt="No hay imagen disponible para esta carta" className="max-h-[70vh] w-auto max-w-full rounded-[4.5%]" />
               )}
             </div>
           )}

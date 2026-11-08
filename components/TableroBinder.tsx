@@ -15,6 +15,7 @@ import {
 import { useState, useTransition, type ReactNode } from "react";
 import { colocarCartaAccion, moverCartaAccion, quitarCartaAccion } from "@/app/binder/acciones";
 import type { EstadoAccion } from "@/app/coleccion/tipos";
+import ImagenConRespaldo from "@/components/ImagenConRespaldo";
 import PanelColeccion from "@/components/PanelColeccion";
 import { type Accion, decidirSoltar, type Destino, type Origen } from "@/lib/arrastre";
 import type { CartaPanel } from "@/lib/panel-coleccion";
@@ -78,13 +79,7 @@ function TarjetaPanel({ carta }: { carta: CartaPanel }) {
       className={`flex w-full cursor-grab touch-none flex-col gap-1 rounded-xl border-2 border-tinta bg-white p-1.5 text-left hover:bg-amarillo focus-visible:bg-amarillo ${isDragging ? "opacity-40" : ""}`}
     >
       <span className="flex aspect-[5/7] w-full items-center justify-center overflow-hidden rounded-lg bg-[#e9e9ee]">
-        {carta.imagenUrl ? (
-          // La URL está firmada y caduca: next/image la cachearía vencida.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={carta.imagenUrl} alt="" draggable={false} className="h-full w-full object-contain" />
-        ) : (
-          <span className="px-1 text-center text-xs font-bold">Sin imagen</span>
-        )}
+        <ImagenConRespaldo src={carta.imagenUrl} alt="" draggable={false} />
       </span>
       <span className="block truncate text-xs font-extrabold">{carta.nombre}</span>
       <span className="block truncate text-xs">
