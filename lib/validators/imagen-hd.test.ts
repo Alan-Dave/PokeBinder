@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { esIdiomaTcgdex, idApiSchema, idCartaImagenSchema } from "./imagen-hd";
+import { esIdiomaTcgdex, idApiSchema, idCartaImagenSchema, tamanoImagenSchema } from "./imagen-hd";
 
 describe("idCartaImagenSchema", () => {
   it("acepta un id numérico y lo convierte", () => {
@@ -40,5 +40,20 @@ describe("esIdiomaTcgdex", () => {
     expect(["en", "es", "fr", "pt", "ja"].every(esIdiomaTcgdex)).toBe(true);
     expect(esIdiomaTcgdex("zh")).toBe(false);
     expect(esIdiomaTcgdex("../")).toBe(false);
+  });
+});
+
+describe("tamanoImagenSchema", () => {
+  it("usa hd cuando no se pide tamaño", () => {
+    expect(tamanoImagenSchema.parse(undefined)).toBe("hd");
+  });
+
+  it("acepta min y hd", () => {
+    expect(tamanoImagenSchema.parse("min")).toBe("min");
+    expect(tamanoImagenSchema.parse("hd")).toBe("hd");
+  });
+
+  it.each(["", "low", "HD", "min/../x", "1", "min ", null])("rechaza %j", (valor) => {
+    expect(tamanoImagenSchema.safeParse(valor).success).toBe(false);
   });
 });
