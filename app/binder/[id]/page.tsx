@@ -96,6 +96,7 @@ export default async function BinderDetallePage({
                 carta={
                   c
                     ? {
+                        id: c.cartaId,
                         nombre: c.nombre,
                         idApi: c.idApi,
                         variante: c.variante,
