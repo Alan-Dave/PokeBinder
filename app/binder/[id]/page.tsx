@@ -4,6 +4,7 @@ import ControlesBinder from "@/components/ControlesBinder";
 import TableroBinder from "@/components/TableroBinder";
 import { listarOpcionesInventario, obtenerBinder, SIN_SESION } from "@/lib/binders";
 import { urlsImagenesOpcionales } from "@/lib/catalogo";
+import { listarCategorias } from "@/lib/categorias";
 import { PAGINAS_MAX, PAGINAS_MIN } from "@/lib/validators/binders";
 
 // Depende de la sesión del usuario y las URLs firmadas caducan: sin caché.
@@ -59,13 +60,15 @@ export default async function BinderDetallePage({
   const total = binder.filas * binder.columnas;
 
   const opciones = await listarOpcionesInventario();
+  const listaCategorias = await listarCategorias();
+  const categorias = listaCategorias.ok ? listaCategorias.datos.map((c) => ({ id: c.id, nombre: c.nombre })) : [];
   const imagenes = await urlsImagenesOpcionales([...new Set(casillas.map((c) => c.cartaId))]);
   const porPosicion = new Map(casillas.map((c) => [c.posicion, c]));
 
   const enlace = (n: number) => `/binder/${binder.id}?pagina=${n}`;
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-8">
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 p-8">
       <Link href="/binder" className="text-sm underline">
         ← Mis binders
       </Link>
@@ -82,7 +85,7 @@ export default async function BinderDetallePage({
         binderId={binder.id}
         pagina={pagina}
         ocupadas={casillas.map((c) => c.posicion)}
-        opciones={opciones.ok ? opciones.datos : []}
+        categorias={categorias}
       >
         <ul className={`grid gap-3 ${COLUMNAS[binder.columnas]}`}>
           {Array.from({ length: total }, (_, posicion) => {
