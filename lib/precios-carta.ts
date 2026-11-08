@@ -3,7 +3,7 @@ import "server-only";
 import type { PreciosCarta } from "@/lib/precios";
 import { descargarPrecios } from "@/lib/tcgdex";
 import { esIdiomaTcgdex, type IdiomaTcgdex } from "@/lib/validators/imagen-hd";
-import { preciosCartasSchema } from "@/lib/validators/precios";
+import { CARTAS_PRECIO_MAX, cartaPrecioSchema } from "@/lib/validators/precios";
 
 /**
  * Precios de mercado de las cartas (PBI-29, RF-07).
@@ -56,10 +56,22 @@ async function consultar(idioma: IdiomaTcgdex, idApi: string): Promise<PreciosCa
 async function preciosDeCarta(idioma: string, idApi: string): Promise<PreciosCarta | null> {
   const idiomas: IdiomaTcgdex[] = esIdiomaTcgdex(idioma) && idioma !== "en" ? [idioma, "en"] : ["en"];
   for (const i of idiomas) {
-    const precios = await consultar(i, idApi);
-    if (precios) return precios;
+    for (const id of variantesDeId(idApi)) {
+      const precios = await consultar(i, id);
+      if (precios) return precios;
+    }
   }
   return null;
+}
+
+/**
+ * Nuestro catálogo guarda algunos números sin ceros a la izquierda (sv10-60,
+ * swsh11-43) y TCGdex los publica con tres cifras (sv10-060). Se prueba el id
+ * tal cual y, si cambia, el rellenado. El resultado sigue cumpliendo idApiSchema.
+ */
+export function variantesDeId(idApi: string): string[] {
+  const rellenado = idApi.replace(/-(\d{1,2})$/, (_, n: string) => `-${n.padStart(3, "0")}`);
+  return rellenado === idApi ? [idApi] : [idApi, rellenado];
 }
 
 /** Ejecuta `tarea` sobre cada elemento con como mucho `limite` a la vez. */
@@ -82,11 +94,17 @@ async function enParalelo<T, R>(items: readonly T[], limite: number, tarea: (ite
  * Quien llama pasa cartas que ya salieron de la base (RLS acotó el acceso).
  */
 export async function obtenerPreciosCartas(entrada: unknown): Promise<Map<string, PreciosCarta | null>> {
-  const validado = preciosCartasSchema.safeParse(entrada);
-  if (!validado.success) return new Map();
+  if (!Array.isArray(entrada) || entrada.length > CARTAS_PRECIO_MAX) return new Map();
+
+  // Cada carta se valida por separado: una con id raro no debe dejar sin
+  // precio a las demás de la página.
+  const validas = entrada.flatMap((c) => {
+    const r = cartaPrecioSchema.safeParse(c);
+    return r.success ? [r.data] : [];
+  });
 
   // Una misma carta puede aparecer en varias variantes: se consulta una vez.
-  const unicas = [...new Map(validado.data.map((c) => [c.idApi, c])).values()];
+  const unicas = [...new Map(validas.map((c) => [c.idApi, c])).values()];
   const resultado = new Map<string, PreciosCarta | null>();
 
   try {
