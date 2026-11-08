@@ -7,16 +7,46 @@
  * si no hay coincidencia el resultado es "sin precio", nunca una estimación.
  */
 
-export type PrecioAcabado = { acabado: string; mercado: number };
+export type PrecioAcabado = {
+  acabado: string;
+  mercado: number;
+  /** Precio más bajo publicado en TCGplayer; null si no lo informa. */
+  bajo?: number | null;
+  /** Precio medio publicado en TCGplayer; null si no lo informa. */
+  medio?: number | null;
+  /** Id del producto en TCGplayer, para el enlace a la tienda. */
+  productoId?: number | null;
+};
+
+/** Una línea de Cardmarket (versión normal o holo). Todo es opcional: la fuente no siempre lo trae. */
+export type LineaCardmarket = {
+  minimo: number | null;
+  tendencia: number | null;
+  promedio7: number | null;
+  promedio30: number | null;
+};
+
+export type PreciosCardmarket = {
+  moneda: "EUR";
+  actualizado: string | null;
+  /** Id del producto en Cardmarket, para el enlace a la tienda. */
+  productoId: number | null;
+  normal: LineaCardmarket;
+  holo: LineaCardmarket;
+};
 
 export type PreciosCarta = {
+  /** Moneda de `acabados` (TCGplayer). Cardmarket va aparte, en euros. */
   moneda: "USD";
   // Fecha que informa la fuente; null si no la trae.
   actualizado: string | null;
+  /** Precios de TCGplayer. Puede estar vacío si solo hay precio en Cardmarket. */
   acabados: PrecioAcabado[];
+  /** Precios de Cardmarket; ausente o null si la carta no está allí. */
+  cardmarket?: PreciosCardmarket | null;
 };
 
-type AcabadoCrudo = { marketPrice?: number } | undefined;
+type AcabadoCrudo = { marketPrice?: number; lowPrice?: number; midPrice?: number; productId?: number } | undefined;
 type TcgplayerCrudo = { unit?: string; updated?: string; [acabado: string]: unknown };
 
 /**
@@ -29,13 +59,97 @@ export function extraerPrecios(tcgplayer: TcgplayerCrudo | undefined): PreciosCa
   const acabados: PrecioAcabado[] = [];
   for (const [clave, valor] of Object.entries(tcgplayer)) {
     if (clave === "unit" || clave === "updated") continue;
-    const mercado = (valor as AcabadoCrudo)?.marketPrice;
-    if (typeof mercado === "number") acabados.push({ acabado: clave, mercado });
+    const crudo = valor as AcabadoCrudo;
+    const mercado = crudo?.marketPrice;
+    if (typeof mercado === "number") {
+      acabados.push({
+        acabado: clave,
+        mercado,
+        bajo: crudo?.lowPrice ?? null,
+        medio: crudo?.midPrice ?? null,
+        productoId: crudo?.productId ?? null,
+      });
+    }
   }
   if (acabados.length === 0) return null;
 
   acabados.sort((a, b) => a.acabado.localeCompare(b.acabado));
   return { moneda: "USD", actualizado: tcgplayer.updated ?? null, acabados };
+}
+
+type CardmarketCrudo =
+  | {
+      unit?: string;
+      updated?: string;
+      idProduct?: number;
+      low?: number;
+      trend?: number;
+      avg7?: number;
+      avg30?: number;
+      "low-holo"?: number;
+      "trend-holo"?: number;
+      "avg7-holo"?: number;
+      "avg30-holo"?: number;
+    }
+  | undefined;
+
+function lineaCardmarket(
+  minimo?: number,
+  tendencia?: number,
+  promedio7?: number,
+  promedio30?: number,
+): LineaCardmarket {
+  return {
+    minimo: minimo ?? null,
+    tendencia: tendencia ?? null,
+    promedio7: promedio7 ?? null,
+    promedio30: promedio30 ?? null,
+  };
+}
+
+const lineaTieneDatos = (l: LineaCardmarket) => Object.values(l).some((v) => v !== null);
+
+/**
+ * Convierte el bloque de Cardmarket ya validado. Devuelve null si la fuente no
+ * está en euros o no trae ningún precio: no se convierte ninguna moneda.
+ */
+export function extraerCardmarket(crudo: CardmarketCrudo): PreciosCardmarket | null {
+  if (!crudo || crudo.unit !== "EUR") return null;
+
+  const normal = lineaCardmarket(crudo.low, crudo.trend, crudo.avg7, crudo.avg30);
+  const holo = lineaCardmarket(crudo["low-holo"], crudo["trend-holo"], crudo["avg7-holo"], crudo["avg30-holo"]);
+  if (!lineaTieneDatos(normal) && !lineaTieneDatos(holo)) return null;
+
+  return { moneda: "EUR", actualizado: crudo.updated ?? null, productoId: crudo.idProduct ?? null, normal, holo };
+}
+
+/** Enlace a la ficha del producto en TCGplayer, o null si no hay un id válido. */
+export function urlTcgplayer(productoId: number | null | undefined): string | null {
+  return Number.isInteger(productoId) && (productoId as number) > 0
+    ? `https://www.tcgplayer.com/product/${productoId}`
+    : null;
+}
+
+/** Enlace a la ficha del producto en Cardmarket, o null si no hay un id válido. */
+export function urlCardmarket(productoId: number | null | undefined): string | null {
+  return Number.isInteger(productoId) && (productoId as number) > 0
+    ? `https://www.cardmarket.com/en/Pokemon/Products?idProduct=${productoId}`
+    : null;
+}
+
+export type PrecioCardmarketCatalogo = { monto: number; desde: boolean };
+
+/**
+ * Precio de referencia de Cardmarket para el catálogo: la tendencia (el valor
+ * más comparable con el precio de mercado de TCGplayer). Si la versión normal y
+ * la holo difieren, se toma la más baja y se avisa «desde».
+ */
+export function precioCardmarketCatalogo(cm: PreciosCardmarket | null | undefined): PrecioCardmarketCatalogo | null {
+  if (!cm) return null;
+  const montos = [cm.normal.tendencia, cm.holo.tendencia].filter((m): m is number => m !== null);
+  if (montos.length === 0) return null;
+  const monto = Math.min(...montos);
+  return { monto, desde: montos.some((m) => m !== monto) };
 }
 
 const ACABADO_DE_VARIANTE: Record<string, string> = {
@@ -119,6 +233,10 @@ export function valorDeColeccion(filas: readonly { precio: number | null; cantid
     conPrecio += 1;
   }
   return { total: centavos / 100, conPrecio, sinPrecio };
+}
+
+export function formatearEur(monto: number): string {
+  return `€ ${monto.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function formatearUsd(monto: number): string {
