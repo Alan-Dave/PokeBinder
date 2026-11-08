@@ -10,7 +10,14 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { agregarCartaAccion } from "@/app/catalogo/acciones";
-import { eliminarAccion, guardarCantidadAccion } from "./acciones";
+import {
+  alternarCategoriaAccion,
+  crearCategoriaAccion,
+  eliminarAccion,
+  eliminarCategoriaAccion,
+  guardarCantidadAccion,
+  renombrarCategoriaAccion,
+} from "./acciones";
 
 const INICIAL = { error: null, exito: false };
 
@@ -82,6 +89,55 @@ describe("eliminarAccion", () => {
 
     expect(estado.exito).toBe(false);
     expect(cliente.from).not.toHaveBeenCalled();
+  });
+});
+
+describe("acciones de categorías", () => {
+  it("crear una categoría válida refresca /coleccion", async () => {
+    sesion();
+
+    expect(await crearCategoriaAccion(INICIAL, formulario({ nombre: "Mis Sylveon" }))).toEqual({
+      error: null,
+      exito: true,
+    });
+    expect(revalidatePath).toHaveBeenCalledWith("/coleccion");
+  });
+
+  it.each([
+    ["crear sin nombre", () => crearCategoriaAccion(INICIAL, formulario({}))],
+    ["crear con nombre en blanco", () => crearCategoriaAccion(INICIAL, formulario({ nombre: "   " }))],
+    ["crear con nombre larguísimo", () => crearCategoriaAccion(INICIAL, formulario({ nombre: "x".repeat(61) }))],
+    ["renombrar con id manipulado", () => renombrarCategoriaAccion(INICIAL, formulario({ id: "1 OR 1=1", nombre: "x" }))],
+    ["eliminar con id no numérico", () => eliminarCategoriaAccion(INICIAL, formulario({ id: "../x" }))],
+    ["marcar con carta inválida", () => alternarCategoriaAccion(INICIAL, formulario({ categoriaId: "1", inventarioId: "-4", marcar: "1" }))],
+    ["desmarcar con categoría inválida", () => alternarCategoriaAccion(INICIAL, formulario({ categoriaId: "x", inventarioId: "4" }))],
+  ])("rechaza %s sin tocar la base", async (_, llamar) => {
+    const cliente = sesion();
+
+    const estado = await llamar();
+
+    expect(estado.exito).toBe(false);
+    expect(estado.error).toBeTruthy();
+    expect(cliente.from).not.toHaveBeenCalled();
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("renombrar y eliminar válidos refrescan /coleccion", async () => {
+    sesion();
+
+    expect(await renombrarCategoriaAccion(INICIAL, formulario({ id: "2", nombre: "Nuevo" }))).toEqual({ error: null, exito: true });
+    expect(await eliminarCategoriaAccion(INICIAL, formulario({ id: "2" }))).toEqual({ error: null, exito: true });
+    expect(revalidatePath).toHaveBeenCalledTimes(2);
+  });
+
+  it("con «marcar» asigna y sin él quita", async () => {
+    const cliente = sesion();
+
+    await alternarCategoriaAccion(INICIAL, formulario({ categoriaId: "2", inventarioId: "5", marcar: "1" }));
+    await alternarCategoriaAccion(INICIAL, formulario({ categoriaId: "2", inventarioId: "5" }));
+
+    expect(cliente.from).toHaveBeenCalledTimes(2);
+    expect(revalidatePath).toHaveBeenCalledTimes(2);
   });
 });
 
