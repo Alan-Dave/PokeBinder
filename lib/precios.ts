@@ -70,6 +70,33 @@ export function precioDeVariante(precios: PreciosCarta | null | undefined, varia
   return precios.acabados.find((a) => a.acabado === acabado)?.mercado ?? null;
 }
 
+export type PrecioCatalogo = {
+  /** Precio más bajo entre las variantes de la carta que tienen precio. */
+  monto: number;
+  /** true si otras variantes cuestan distinto: se muestra como «desde». */
+  desde: boolean;
+};
+
+/**
+ * Precio de referencia de una carta del catálogo, que muestra todas sus
+ * variantes. Se toma el más bajo y se avisa si las demás cuestan distinto;
+ * así nunca se anuncia un precio que no se pueda conseguir. Solo cuentan las
+ * variantes que enlazan sin ambigüedad con un acabado (ver precioDeVariante):
+ * si ninguna enlaza, el resultado es «sin precio», no una estimación.
+ */
+export function precioDeCatalogo(
+  precios: PreciosCarta | null | undefined,
+  variantes: readonly string[],
+): PrecioCatalogo | null {
+  const montos = variantes.flatMap((v) => {
+    const monto = precioDeVariante(precios, v);
+    return monto === null ? [] : [monto];
+  });
+  if (montos.length === 0) return null;
+  const monto = Math.min(...montos);
+  return { monto, desde: montos.some((m) => m !== monto) };
+}
+
 export type ValorColeccion = {
   /** Suma de precio × cantidad de las filas que tienen precio. */
   total: number;

@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import AgregarAlInventario from "@/components/AgregarAlInventario";
 import ImagenCarta from "@/components/ImagenCarta";
+import PrecioCarta, { PrecioCartaCargando } from "@/components/PrecioCarta";
 import { estiloDeTipo } from "@/lib/estilo-carta";
 import { buscarCartas, obtenerFiltros, TAMANO_PAGINA_CATALOGO, urlsImagenesOpcionales } from "@/lib/catalogo";
+import { obtenerPreciosCartas } from "@/lib/precios-carta";
 import { IDIOMAS } from "@/lib/validators/catalogo";
 import { CANTIDAD_MAX, CANTIDAD_MIN } from "@/lib/validators/inventario";
 
@@ -76,6 +79,9 @@ export default async function CatalogoPage({ searchParams }: { searchParams: Par
 
     // Las imágenes son un extra: sin ellas la página se muestra con un marcador.
     const imagenes = await urlsImagenesOpcionales(filas.map((f) => f.id));
+    // Los precios vienen de TCGdex y pueden tardar: la consulta arranca ya, pero
+    // la página no la espera. Cada tarjeta muestra su precio cuando llega.
+    const precios = obtenerPreciosCartas(filas.map((f) => ({ idApi: f.id_api, idioma: f.idioma })));
 
     contenido =
       filas.length === 0 ? (
@@ -120,6 +126,11 @@ export default async function CatalogoPage({ searchParams }: { searchParams: Par
                       <span className={`${ETIQUETA} bg-[#e9e9ee]`}>Sin clasificar</span>
                     )}
                   </div>
+                  <p className="flex min-h-8 items-center">
+                    <Suspense fallback={<PrecioCartaCargando />}>
+                      <PrecioCarta precios={precios} idApi={carta.id_api} variantes={carta.variantes_disponibles} />
+                    </Suspense>
+                  </p>
                   <AgregarAlInventario
                     cartaId={carta.id}
                     variantes={carta.variantes_disponibles}
