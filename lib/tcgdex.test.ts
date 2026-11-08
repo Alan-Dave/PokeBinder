@@ -41,9 +41,15 @@ describe("urlCarta", () => {
 
 describe("urlImagenAltaDefinicion", () => {
   it("acepta la URL base de TCGdex y agrega la calidad alta", () => {
-    expect(urlImagenAltaDefinicion(BASE_IMAGEN)).toBe(
-      "https://assets.tcgdex.net/en/base/base1/4/high.webp",
-    );
+    expect(urlImagenAltaDefinicion(BASE_IMAGEN)).toBe("https://assets.tcgdex.net/en/base/base1/4/high.webp");
+  });
+
+  it("con tamaño min arma la miniatura (low.webp)", () => {
+    expect(urlImagenAltaDefinicion(BASE_IMAGEN, "min")).toBe("https://assets.tcgdex.net/en/base/base1/4/low.webp");
+  });
+
+  it("valida la URL igual de estricto con el tamaño min", () => {
+    expect(urlImagenAltaDefinicion("https://evil.example/en/base/base1/4", "min")).toBeNull();
   });
 
   it.each([
@@ -91,6 +97,16 @@ describe("descargarImagenAltaDefinicion", () => {
     expect(opciones.every((o) => o.redirect === "error")).toBe(true);
   });
 
+  it("con tamaño min pide la miniatura", async () => {
+    const fetchFalso = simularTcgdex(() => new Response(WEBP));
+
+    expect(await descargarImagenAltaDefinicion("en", "base1-4", "min")).toEqual(WEBP);
+    expect(fetchFalso.mock.calls.map(([url]) => url)).toEqual([
+      "https://api.tcgdex.net/v2/en/cards/base1-4",
+      "https://assets.tcgdex.net/en/base/base1/4/low.webp",
+    ]);
+  });
+
   it("no pide la imagen si la API devuelve un host que no es el permitido", async () => {
     const fetchFalso = simularTcgdex(() => new Response(WEBP), "https://evil.example/x/y/z/1");
 
@@ -99,7 +115,10 @@ describe("descargarImagenAltaDefinicion", () => {
   });
 
   it("devuelve null si la carta no existe (404)", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => respuestaJson({}, 404)));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => respuestaJson({}, 404)),
+    );
     expect(await descargarImagenAltaDefinicion("es", "base1-4")).toBeNull();
   });
 
