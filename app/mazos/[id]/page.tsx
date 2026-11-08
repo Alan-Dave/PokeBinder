@@ -3,10 +3,12 @@ import AgregarAlMazo from "@/components/AgregarAlMazo";
 import EliminarMazo from "@/components/EliminarMazo";
 import FilaMazo from "@/components/FilaMazo";
 import { buscarCartas } from "@/lib/catalogo";
+import { obtenerLegalidadMazo } from "@/lib/legalidad-mazo";
 import { obtenerMazo, SIN_SESION } from "@/lib/mazos";
 import { COPIAS_MAX, TAMANO_MAZO } from "@/lib/reglas-mazo";
 import { CANTIDAD_MAZO_MAX, CANTIDAD_MAZO_MIN } from "@/lib/validators/mazos";
 import { IDIOMAS } from "@/lib/validators/catalogo";
+import { FORMATOS_LEGALIDAD, NOMBRES_FORMATO } from "@/lib/validators/legalidad";
 
 // Depende de la sesión del usuario: nunca se sirve desde una copia en caché.
 export const dynamic = "force-dynamic";
@@ -44,6 +46,7 @@ export default async function MazoDetallePage({
   const parametros = await searchParams;
   const texto = primero(parametros.texto);
   const idioma = primero(parametros.idioma);
+  const formato = primero(parametros.formato);
 
   // La validación real la hace obtenerMazo; el resultado trae el mensaje.
   const resultado = await obtenerMazo({ mazoId: entero(id) });
@@ -63,6 +66,9 @@ export default async function MazoDetallePage({
   }
 
   const { mazo, lineas, reglas } = resultado.datos;
+
+  // Solo se consulta a TCGdex cuando el usuario elige un formato.
+  const legalidad = formato === "" ? null : await obtenerLegalidadMazo({ mazoId: mazo.id, formato });
 
   // Sin texto no se consulta el catálogo: son 95.000 cartas.
   const busqueda = texto === "" ? null : await buscarCartas({ texto, idioma, pagina: 1 });
@@ -100,6 +106,74 @@ export default async function MazoDetallePage({
               <li key={`${a.regla}-${a.mensaje}`}>{a.mensaje}</li>
             ))}
           </ul>
+        )}
+      </section>
+
+      <section aria-labelledby="titulo-legalidad" className="flex flex-col gap-2">
+        <h2 id="titulo-legalidad" className="font-medium">
+          Legalidad por formato
+        </h2>
+        <form method="get" className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 text-sm">
+            Formato
+            <select name="formato" defaultValue={formato} className={CAMPO}>
+              <option value="" disabled>
+                Elige un formato
+              </option>
+              {FORMATOS_LEGALIDAD.map((f) => (
+                <option key={f} value={f}>
+                  {NOMBRES_FORMATO[f]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="submit"
+            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          >
+            Comprobar
+          </button>
+        </form>
+        {legalidad && !legalidad.ok && (
+          <p role="alert" className="rounded-md bg-red-100 px-4 py-2 text-sm text-red-900">
+            {legalidad.error}
+          </p>
+        )}
+        {legalidad?.ok && (
+          <>
+            {legalidad.datos.veredicto === "legal" && (
+              <p role="status" className="rounded-md bg-green-100 px-4 py-2 text-sm text-green-900">
+                Legal en {NOMBRES_FORMATO[legalidad.datos.formato]}: todas las cartas están permitidas.
+              </p>
+            )}
+            {legalidad.datos.veredicto === "no-legal" && (
+              <p role="alert" className="rounded-md bg-red-100 px-4 py-2 text-sm text-red-900">
+                No es legal en {NOMBRES_FORMATO[legalidad.datos.formato]}: {legalidad.datos.noLegales}{" "}
+                {legalidad.datos.noLegales === 1 ? "carta no está permitida" : "cartas no están permitidas"}.
+              </p>
+            )}
+            {legalidad.datos.veredicto === "no-verificable" && (
+              <p role="status" className="rounded-md bg-amber-100 px-4 py-2 text-sm text-amber-900">
+                No se pudo verificar en {NOMBRES_FORMATO[legalidad.datos.formato]}: {legalidad.datos.noVerificables}{" "}
+                {legalidad.datos.noVerificables === 1 ? "carta" : "cartas"} sin información de legalidad. No lo
+                tomes como legal.
+              </p>
+            )}
+            {legalidad.datos.veredicto !== "legal" && (
+              <ul className="flex list-disc flex-col gap-1 pl-8 text-sm">
+                {legalidad.datos.cartas
+                  .filter((c) => c.estado !== "legal")
+                  .map((c) => (
+                    <li key={c.cartaId}>
+                      {c.nombre} — {c.estado === "no-legal" ? "no permitida" : "sin información"}
+                    </li>
+                  ))}
+              </ul>
+            )}
+            <p className="text-xs text-zinc-600 dark:text-zinc-400">
+              Datos de TCGdex. Los formatos rotan: la comprobación se actualiza cada 24 horas.
+            </p>
+          </>
         )}
       </section>
 
