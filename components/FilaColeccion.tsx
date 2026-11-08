@@ -3,6 +3,8 @@
 import { useActionState, useState } from "react";
 import { eliminarAccion, guardarCantidadAccion } from "@/app/coleccion/acciones";
 import type { EstadoAccion } from "@/app/coleccion/tipos";
+import SelectorCategorias from "@/components/SelectorCategorias";
+import type { Categoria } from "@/lib/categorias";
 import type { FilaInventario } from "@/lib/inventario";
 import { etiquetaVariante } from "@/lib/variantes";
 
@@ -18,9 +20,12 @@ type Props = {
   max: number;
   // Precio unitario ya formateado, calculado en el servidor; null si no hay.
   precio?: string | null;
+  // Categorías del usuario y las ids donde ya está esta fila (PBI-X7).
+  categorias?: Categoria[];
+  categoriasDeLaFila?: number[];
 };
 
-export default function FilaColeccion({ fila, min, max, precio }: Props) {
+export default function FilaColeccion({ fila, min, max, precio, categorias = [], categoriasDeLaFila = [] }: Props) {
   const [estadoGuardar, guardar, guardando] = useActionState(guardarCantidadAccion, INICIAL);
   const [estadoEliminar, eliminar, eliminando] = useActionState(eliminarAccion, INICIAL);
   const [confirmando, setConfirmando] = useState(false);
@@ -86,6 +91,8 @@ export default function FilaColeccion({ fila, min, max, precio }: Props) {
           )}
         </div>
       </div>
+
+      <SelectorCategorias inventarioId={fila.id} categorias={categorias} marcadas={categoriasDeLaFila} />
 
       {error && (
         <p role="alert" className="text-sm text-red-700 dark:text-red-400">
