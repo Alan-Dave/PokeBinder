@@ -30,6 +30,12 @@ export default async function Home() {
             <Link href="/mazos" className="underline">
               Mis mazos
             </Link>
+            <Link href="/dashboard" className="underline">
+              Dashboard
+            </Link>
+            <Link href="/reportes" className="underline">
+              Reportes
+            </Link>
             {/* Comodidad visual: el control real está en la base (regla 6). */}
             {perfil.rol === "superusuario" && (
               <>
