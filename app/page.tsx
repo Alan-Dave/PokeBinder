@@ -47,12 +47,6 @@ export default async function Home() {
                 </Link>
               </>
             )}
-            <Link href="/dashboard" className="underline">
-              Dashboard
-            </Link>
-            <Link href="/reportes" className="underline">
-              Reportes
-            </Link>
           </>
         )}
       </nav>
