@@ -17,7 +17,14 @@ const baloo = Baloo_2({
   weight: ["600", "700", "800"],
 });
 
+// Las imágenes para compartir (Open Graph) necesitan una URL absoluta. Vercel
+// informa el dominio de producción; en local se usa localhost.
+const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  : "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(baseUrl),
   title: "PokeBinder",
   description: "Gestión de colecciones físicas de Pokémon TCG",
 };
