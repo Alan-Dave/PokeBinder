@@ -1,4 +1,5 @@
 import Link from "next/link";
+import CarpetaBinder from "@/components/CarpetaBinder";
 import CasillaBinder from "@/components/CasillaBinder";
 import ControlesBinder from "@/components/ControlesBinder";
 import TableroBinder from "@/components/TableroBinder";
@@ -87,31 +88,33 @@ export default async function BinderDetallePage({
         ocupadas={casillas.map((c) => c.posicion)}
         categorias={categorias}
       >
-        <ul className={`grid gap-3 ${COLUMNAS[binder.columnas]}`}>
-          {Array.from({ length: total }, (_, posicion) => {
-            const c = porPosicion.get(posicion);
-            return (
-              <CasillaBinder
-                key={posicion}
-                binderId={binder.id}
-                pagina={pagina}
-                posicion={posicion}
-                carta={
-                  c
-                    ? {
-                        id: c.cartaId,
-                        nombre: c.nombre,
-                        idApi: c.idApi,
-                        variante: c.variante,
-                        imagenUrl: imagenes[c.cartaId] ?? null,
-                      }
-                    : null
-                }
-                opciones={opciones.ok ? opciones.datos : []}
-              />
-            );
-          })}
-        </ul>
+        <CarpetaBinder id={binder.id} nombre={binder.nombre}>
+          <ul className={`grid gap-3 ${COLUMNAS[binder.columnas]}`}>
+            {Array.from({ length: total }, (_, posicion) => {
+              const c = porPosicion.get(posicion);
+              return (
+                <CasillaBinder
+                  key={posicion}
+                  binderId={binder.id}
+                  pagina={pagina}
+                  posicion={posicion}
+                  carta={
+                    c
+                      ? {
+                          id: c.cartaId,
+                          nombre: c.nombre,
+                          idApi: c.idApi,
+                          variante: c.variante,
+                          imagenUrl: imagenes[c.cartaId] ?? null,
+                        }
+                      : null
+                  }
+                  opciones={opciones.ok ? opciones.datos : []}
+                />
+              );
+            })}
+          </ul>
+        </CarpetaBinder>
       </TableroBinder>
 
       <nav aria-label="Páginas del binder" className="flex items-center justify-between text-sm">

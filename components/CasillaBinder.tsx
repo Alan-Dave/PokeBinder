@@ -49,8 +49,8 @@ export default function CasillaBinder({ binderId, pagina, posicion, carta, opcio
   return (
     <li
       ref={soltable}
-      className={`flex aspect-[5/7] flex-col gap-2 overflow-hidden rounded-lg border p-2 text-sm ${
-        isOver ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "border-zinc-200 dark:border-zinc-800"
+      className={`flex aspect-[5/7] flex-col gap-2 overflow-hidden rounded-xl border-[3px] p-2 text-sm shadow-[inset_0_0_0_2px_rgba(255,255,255,0.8)] ${
+        isOver ? "border-azul bg-[#dfe8ff]" : "border-tinta/40 bg-white/70"
       }`}
     >
       {carta ? (
