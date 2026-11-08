@@ -21,7 +21,26 @@ export default function ImagenCarta({ url, urlRespaldo, alt }: Props) {
   const [fuentes, setFuentes] = useState<string[]>(url ? [url, urlRespaldo] : [urlRespaldo]);
 
   if (fuentes.length === 0) {
-    return <span className="text-sm text-zinc-500">Sin imagen</span>;
+    return (
+      <span className="flex flex-col items-center gap-2 text-center text-sm font-bold">
+        <svg
+          width="48"
+          height="48"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <rect x="3" y="4" width="18" height="16" rx="3" />
+          <circle cx="9" cy="10" r="2" />
+          <path d="M21 16l-5-5-8 8" />
+        </svg>
+        Sin imagen
+      </span>
+    );
   }
 
   return (
