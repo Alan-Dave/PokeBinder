@@ -53,7 +53,12 @@ export default async function Home() {
 
       {perfil ? (
         <div className="flex flex-col items-center gap-3">
-          <p>Sesión iniciada como {perfil.nombreVisible ?? perfil.correo ?? "usuario"}.</p>
+          <p>
+            Sesión iniciada como {perfil.nombreVisible ?? perfil.correo ?? "usuario"}.{" "}
+            <Link href="/cuenta" className="underline">
+              Mi cuenta
+            </Link>
+          </p>
           <form action={cerrarSesionAccion}>
             <button
               type="submit"
