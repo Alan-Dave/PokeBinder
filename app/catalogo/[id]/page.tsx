@@ -4,6 +4,7 @@ import AgregarAlInventario from "@/components/AgregarAlInventario";
 import ComparadorPrecios from "@/components/ComparadorPrecios";
 import ReportarError from "@/components/ReportarError";
 import VisorImagen from "@/components/VisorImagen";
+import { listarCategorias } from "@/lib/categorias";
 import { obtenerCarta, urlsImagenesOpcionales } from "@/lib/catalogo";
 import { registrarPrecios } from "@/lib/historial-precios";
 import { obtenerPreciosCartas } from "@/lib/precios-carta";
@@ -48,6 +49,8 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
   if (resultado.datos === null) notFound();
 
   const carta = resultado.datos;
+  const listaCategorias = await listarCategorias();
+  const categorias = listaCategorias.ok ? listaCategorias.datos.map((c) => ({ id: c.id, nombre: c.nombre })) : [];
   const imagenes = await urlsImagenesOpcionales([carta.id]);
   const url = imagenes[carta.id];
   const precios =
@@ -107,6 +110,7 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
               variantes={carta.variantes_disponibles}
               min={CANTIDAD_MIN}
               max={CANTIDAD_MAX}
+              categorias={categorias}
             />
           </div>
 

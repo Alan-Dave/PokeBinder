@@ -13,6 +13,9 @@ const nombre = z
   .min(1, { error: "Escribe un nombre para la categoría." })
   .max(NOMBRE_CATEGORIA_MAX, { error: `El nombre admite hasta ${NOMBRE_CATEGORIA_MAX} caracteres.` });
 
+// Categoría opcional al agregar desde el catálogo: sin elegir (undefined) no hay categoría.
+export const categoriaOpcionalSchema = idCategoria.optional();
+
 export const crearCategoriaSchema = z.object({ nombre });
 
 export const renombrarCategoriaSchema = z.object({ id: idCategoria, nombre });
