@@ -46,6 +46,16 @@ export function patronPrefijo(texto: string): string {
 }
 
 /**
+ * Como patronPrefijo, pero busca el texto en cualquier parte del nombre
+ * («eon» encuentra Sylveon). Para el inventario del usuario, que es pequeño y
+ * ya viene acotado por RLS; el catálogo completo sigue usando el prefijo.
+ */
+export function patronContiene(texto: string): string {
+  const limpio = texto.trim().toLowerCase().replaceAll("*", "");
+  return `%${limpio.replace(/[\\%_]/g, "\\$&")}%`;
+}
+
+/**
  * Id de carta tomado de la URL (/catalogo/123). La ruta llega como texto: se
  * exige que sean solo dígitos antes de convertirlo, porque Number() acepta
  * cosas como "1e3", "0x10" o " 12 " que no son un id. Hasta 15 dígitos para
