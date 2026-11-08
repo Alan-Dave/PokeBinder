@@ -40,8 +40,9 @@ from collections import Counter
 from dataclasses import dataclass
 
 HOST_API = "api.tcgdex.net"
-PAGINA = 5000
-REINTENTOS = 4
+PAGINA = 1000
+REINTENTOS = 7
+ESPERA_MAXIMA = 60
 PAUSA_ENTRE_PETICIONES = 0.3
 
 CATEGORIAS = ("Pokemon", "Trainer", "Energy")
@@ -137,7 +138,11 @@ def pedir_json(url: str) -> list[dict]:
             return datos
         except (urllib.error.URLError, TimeoutError, ValueError) as e:
             ultimo = e
-            time.sleep(2**intento)
+            # TCGdex responde 503 de forma intermitente: se espera cada vez más.
+            if intento < REINTENTOS - 1:
+                espera = min(2 ** (intento + 1), ESPERA_MAXIMA)
+                print(f"    TCGdex no respondió ({e}); reintento {intento + 2}/{REINTENTOS} en {espera} s...", flush=True)
+                time.sleep(espera)
     raise RuntimeError(f"TCGdex no respondió tras {REINTENTOS} intentos: {ultimo}")
 
 
