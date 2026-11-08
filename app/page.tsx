@@ -30,6 +30,17 @@ export default async function Home() {
             <Link href="/mazos" className="underline">
               Mis mazos
             </Link>
+            {/* Comodidad visual: el control real está en la base (regla 6). */}
+            {perfil.rol === "superusuario" && (
+              <>
+                <Link href="/admin/usuarios" className="underline">
+                  Usuarios y roles
+                </Link>
+                <Link href="/admin/auditoria" className="underline">
+                  Auditoría
+                </Link>
+              </>
+            )}
           </>
         )}
       </nav>

@@ -8,6 +8,7 @@ import {
   colocarCarta,
   crearBinder,
   eliminarBinder,
+  moverCarta,
   quitarCarta,
 } from "@/lib/binders";
 
@@ -39,6 +40,20 @@ export async function colocarCartaAccion(_previo: EstadoAccion, formData: FormDa
     pagina: Number(formData.get("pagina")),
     posicion: Number(formData.get("posicion")),
     inventarioId: Number(formData.get("inventarioId")),
+  });
+  if (!resultado.ok) return { error: resultado.error, exito: false };
+
+  revalidatePath(`/binder/${binderId}`);
+  return { error: null, exito: true };
+}
+
+export async function moverCartaAccion(_previo: EstadoAccion, formData: FormData): Promise<EstadoAccion> {
+  const binderId = Number(formData.get("binderId"));
+  const resultado = await moverCarta({
+    binderId,
+    pagina: Number(formData.get("pagina")),
+    desde: Number(formData.get("desde")),
+    hasta: Number(formData.get("hasta")),
   });
   if (!resultado.ok) return { error: resultado.error, exito: false };
 
