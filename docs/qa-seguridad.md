@@ -28,7 +28,7 @@ limita tiempo y tamaño (defensa contra SSRF).
 |---|---|---|---|
 | F1 | No había política de seguridad de contenido (CSP): el propio `next.config.ts` la dejaba pendiente para este PBI | Media | **Corregido**: `lib/csp.ts` + cabecera en `next.config.ts`, con pruebas |
 | F2 | `/api/cartas/[id]/imagen-hd` no exige sesión ni tiene límite de peticiones: cualquiera puede hacer que el servidor pida imágenes a TCGdex | Baja | Mitigado. Id validado, host fijo, tiempo y tamaño máximos, caché, límite propio de 240 peticiones por minuto por IP y cortafuegos de Vercel (verificado en el despliegue). Queda abierto exigir sesión, si se quiere cerrar del todo |
-| F3 | La CSP admite `'unsafe-inline'` en scripts, porque Next.js inyecta scripts propios para hidratar | Baja | Abierto. Una política con nonce exige renderizar todo dinámicamente; mejora futura |
+| F3 | La CSP admite `'unsafe-inline'` en scripts, porque Next.js inyecta scripts propios para hidratar | Baja | **Corregido**: `proxy.ts` genera un nonce por petición y `script-src` pasa a `'self' 'nonce-…' 'strict-dynamic'`, sin `unsafe-inline`. Todas las páginas se renderizan al pedirse (`connection()` en el layout). Verificado en un navegador real, ver abajo. Queda `style-src 'unsafe-inline'` (Tailwind y estilos en línea): un estilo inyectado cambia la apariencia, pero no ejecuta código |
 | F4 | Las páginas protegidas responden 200 con un aviso en vez de redirigir a `/login` | Informativa | **Corregido** (`lib/rutas-protegidas.ts` + `proxy.ts`): un visitante sin ninguna cookie de sesión va al login. Con una cookie vencida o si Supabase falla, la página se sirve y decide ella; las descargas siguen respondiendo 401. Es comodidad, no control de acceso: la sesión y el rol se siguen verificando en el servidor |
 | F5 | `/reportes/exportar` sin sesión responde 400 (parámetros) en vez de 401 | Informativa | **Corregido** (`exportarFaltantes` comprueba la sesión antes de validar): sin sesión responde 401 con cualquier parámetro y no explica qué faltaba |
 
@@ -56,6 +56,24 @@ aplicación (240 por minuto por IP, respuesta 429), así que **este límite no s
 verificó desde fuera**; sus pruebas unitarias sí pasan. El hallazgo queda mitigado
 por dos capas, una de ellas ajena al código. Probar a ritmo moderado la próxima vez:
 la prueba bloqueó la dirección del evaluador unos minutos.
+
+## Verificación de la CSP con nonce (F3), en un navegador real
+
+Hecha con Edge sin ventana, controlado por el protocolo de depuración (CDP),
+sobre `next start` (compilación de producción). Es un entorno de prueba local:
+no sustituye revisar el despliegue de Vercel.
+
+| Comprobación | Antes (`unsafe-inline`) | Ahora (nonce) |
+|---|---|---|
+| Scripts de la página con nonce (`/catalogo`) | 0 de 44 | 19 de 19 |
+| La página hidrata (elementos con React enganchado) | 999 | 1003 |
+| Errores de CSP al navegar `/`, `/catalogo`, `/login`, `/registro` | ninguno | ninguno |
+| `<script>` en línea sin nonce, llegado en el HTML (simula un XSS) | **se ejecuta** | bloqueado |
+| Manejador `onerror` en línea, llegado en el HTML | **se ejecuta** | bloqueado |
+| Cabeceras `Content-Security-Policy` por respuesta | 1 | 1, con un nonce distinto en cada petición |
+
+La prueba de inyección usó una página temporal, ya eliminada. Las 404 que aparecen
+en la consola de `/catalogo` son las mismas con ambas políticas (imágenes).
 
 ## Qué hace la CSP
 
