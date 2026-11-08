@@ -6,6 +6,7 @@ vi.mock("@/lib/tcgdex", () => ({ descargarPrecios: vi.fn() }));
 import { descargarPrecios } from "@/lib/tcgdex";
 import {
   obtenerPreciosCartas,
+  variantesDeId,
   vaciarCachePrecios,
   VIGENCIA_ACIERTO_MS,
   VIGENCIA_FALLO_MS,
@@ -32,6 +33,14 @@ describe("obtenerPreciosCartas: entrada", () => {
 
     expect(r.size).toBe(0);
     expect(descargarPrecios).not.toHaveBeenCalled();
+  });
+
+  it("una carta con id inválido no deja sin precio a las demás", async () => {
+    const r = await obtenerPreciosCartas([carta("../../x"), carta("sv01-001"), { idApi: "sv01-002" }]);
+
+    expect(r.size).toBe(1);
+    expect(r.get("sv01-001")).toEqual(PRECIOS);
+    expect(descargarPrecios).toHaveBeenCalledTimes(1);
   });
 
   it("una lista vacía no consulta nada", async () => {
@@ -73,16 +82,37 @@ describe("obtenerPreciosCartas: idiomas", () => {
   it("prueba el idioma de la carta y luego el inglés", async () => {
     vi.mocked(descargarPrecios).mockResolvedValueOnce(null).mockResolvedValueOnce(PRECIOS);
 
-    const r = await obtenerPreciosCartas([carta("base1-4", "ja")]);
+    const r = await obtenerPreciosCartas([carta("base1-004", "ja")]);
 
     expect(vi.mocked(descargarPrecios).mock.calls.map(([i]) => i)).toEqual(["ja", "en"]);
-    expect(r.get("base1-4")).toEqual(PRECIOS);
+    expect(r.get("base1-004")).toEqual(PRECIOS);
   });
 
   it("el chino va directo al inglés", async () => {
-    await obtenerPreciosCartas([carta("base1-4", "zh")]);
+    await obtenerPreciosCartas([carta("base1-004", "zh")]);
 
     expect(vi.mocked(descargarPrecios).mock.calls.map(([i]) => i)).toEqual(["en"]);
+  });
+});
+
+describe("variantesDeId y relleno de ceros", () => {
+  it.each([
+    ["swsh11-43", ["swsh11-43", "swsh11-043"]],
+    ["sv10-6", ["sv10-6", "sv10-006"]],
+    ["sv10-060", ["sv10-060"]],
+    ["swsh10.5tg-TG01", ["swsh10.5tg-TG01"]],
+    ["base1-58", ["base1-58", "base1-058"]],
+  ])("%s", (id, esperado) => {
+    expect(variantesDeId(id)).toEqual(esperado);
+  });
+
+  it("si el id sin ceros no existe, prueba el rellenado", async () => {
+    vi.mocked(descargarPrecios).mockResolvedValueOnce(null).mockResolvedValueOnce(PRECIOS);
+
+    const r = await obtenerPreciosCartas([carta("swsh11-43")]);
+
+    expect(vi.mocked(descargarPrecios).mock.calls.map(([, id]) => id)).toEqual(["swsh11-43", "swsh11-043"]);
+    expect(r.get("swsh11-43")).toEqual(PRECIOS);
   });
 });
 
