@@ -12,11 +12,16 @@
  *  - el navegador NO habla con Supabase (todo pasa por el servidor), así que
  *    connect-src no necesita su dominio.
  *
- * Límite conocido: script-src admite 'unsafe-inline' porque Next.js inserta
- * scripts propios para hidratar la página. Una política estricta con nonce
- * obligaría a renderizar todo dinámicamente; queda como mejora futura.
- * Aun así, el resto de directivas (sin orígenes externos, sin iframes, sin
- * plugins, formularios solo hacia el propio sitio) sigue aplicando.
+ * Scripts: con un nonce (un valor aleatorio nuevo en cada petición, que genera
+ * proxy.ts) script-src admite solo los scripts que lo llevan, y los que ellos
+ * carguen ('strict-dynamic'). Next.js lee el nonce de la cabecera de la petición
+ * y lo pone en sus propios scripts. Así, un script inyectado por un atacante no
+ * se ejecuta aunque llegue al HTML. Sin nonce (solo si alguien llama a esta
+ * función sin proxy) cae a 'unsafe-inline', el comportamiento anterior.
+ *
+ * Límite conocido: style-src sigue admitiendo 'unsafe-inline' porque Tailwind y
+ * algunos componentes usan estilos en línea; un estilo inyectado puede cambiar
+ * la apariencia, pero no ejecutar código.
  */
 
 type Opciones = {
@@ -24,7 +29,20 @@ type Opciones = {
   supabaseUrl?: string;
   // En desarrollo Next necesita eval y un websocket para recargar en caliente.
   desarrollo?: boolean;
+  // Valor aleatorio de esta petición (ver nonceDesdeBytes). Activa la política estricta de scripts.
+  nonce?: string;
 };
+
+// Un nonce es base64: letras, dígitos, + / = (y - _ de la variante segura en URL).
+const NONCE_VALIDO = /^[A-Za-z0-9+/_=-]{16,}$/;
+
+/**
+ * Convierte bytes aleatorios en un nonce (base64). Quien llama aporta los bytes
+ * (crypto.getRandomValues): aquí no se genera azar, así se puede probar.
+ */
+export function nonceDesdeBytes(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes));
+}
 
 const RESPALDO_SUPABASE = "https://*.supabase.co";
 
@@ -41,12 +59,18 @@ export function origenSupabase(supabaseUrl: string | undefined): string {
   }
 }
 
-export function construirCsp({ supabaseUrl, desarrollo = false }: Opciones = {}): string {
+export function construirCsp({ supabaseUrl, desarrollo = false, nonce }: Opciones = {}): string {
   const supabase = origenSupabase(supabaseUrl);
+  // Un nonce raro no se "arregla": entraría tal cual a una cabecera de seguridad.
+  if (nonce !== undefined && !NONCE_VALIDO.test(nonce)) throw new Error("El nonce de la CSP no es válido.");
 
   const directivas: Record<string, string[]> = {
     "default-src": ["'self'"],
-    "script-src": ["'self'", "'unsafe-inline'", ...(desarrollo ? ["'unsafe-eval'"] : [])],
+    "script-src": [
+      "'self'",
+      ...(nonce ? [`'nonce-${nonce}'`, "'strict-dynamic'"] : ["'unsafe-inline'"]),
+      ...(desarrollo ? ["'unsafe-eval'"] : []),
+    ],
     // Tailwind y los componentes usan estilos en línea (por ejemplo, el binder).
     "style-src": ["'self'", "'unsafe-inline'"],
     "img-src": ["'self'", "data:", "blob:", supabase],

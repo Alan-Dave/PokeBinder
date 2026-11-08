@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { publicEnv } from "@/lib/env";
+import { construirCsp, nonceDesdeBytes } from "@/lib/csp";
 import { debeRedirigirAlLogin } from "@/lib/rutas-protegidas";
 
 /**
@@ -22,7 +23,19 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
+  // Política de contenido con un nonce nuevo en cada petición. Next.js lo lee de
+  // la cabecera de la PETICIÓN y lo pone en sus scripts; el navegador lo exige
+  // por la cabecera de la RESPUESTA.
+  const nonce = nonceDesdeBytes(crypto.getRandomValues(new Uint8Array(16)));
+  const csp = construirCsp({
+    supabaseUrl: publicEnv.NEXT_PUBLIC_SUPABASE_URL,
+    desarrollo: process.env.NODE_ENV !== "production",
+    nonce,
+  });
+  request.headers.set("content-security-policy", csp);
+
   let respuesta = NextResponse.next({ request });
+  respuesta.headers.set("content-security-policy", csp);
 
   const supabase = createServerClient(
     publicEnv.NEXT_PUBLIC_SUPABASE_URL,
@@ -35,6 +48,7 @@ export async function proxy(request: NextRequest) {
         setAll(cookiesParaGuardar) {
           for (const { name, value } of cookiesParaGuardar) request.cookies.set(name, value);
           respuesta = NextResponse.next({ request });
+          respuesta.headers.set("content-security-policy", csp);
           for (const { name, value, options } of cookiesParaGuardar) {
             respuesta.cookies.set(name, value, options);
           }
