@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  precioDeCatalogo,
   etiquetaAcabado,
   extraerPrecios,
   formatearUsd,
@@ -111,5 +112,46 @@ describe("formato", () => {
   it("traduce los acabados conocidos y deja el resto tal cual", () => {
     expect(etiquetaAcabado("holofoil")).toBe("Holo");
     expect(etiquetaAcabado("algo-nuevo")).toBe("algo-nuevo");
+  });
+});
+
+describe("precioDeCatalogo", () => {
+  const precios = {
+    moneda: "USD" as const,
+    actualizado: null,
+    acabados: [
+      { acabado: "normal", mercado: 0.5 },
+      { acabado: "reverse-holofoil", mercado: 2 },
+    ],
+  };
+
+  it("sin precios o sin variantes no hay precio", () => {
+    expect(precioDeCatalogo(null, ["normal"])).toBeNull();
+    expect(precioDeCatalogo(undefined, ["normal"])).toBeNull();
+    expect(precioDeCatalogo(precios, [])).toBeNull();
+  });
+
+  it("con una sola variante con precio, lo muestra tal cual", () => {
+    expect(precioDeCatalogo(precios, ["normal"])).toEqual({ monto: 0.5, desde: false });
+  });
+
+  it("con varias variantes de distinto precio, toma el más bajo y avisa «desde»", () => {
+    expect(precioDeCatalogo(precios, ["reverse", "normal"])).toEqual({ monto: 0.5, desde: true });
+  });
+
+  it("si las variantes cuestan lo mismo, no avisa «desde»", () => {
+    const iguales = {
+      ...precios,
+      acabados: [
+        { acabado: "normal", mercado: 1 },
+        { acabado: "holofoil", mercado: 1 },
+      ],
+    };
+    expect(precioDeCatalogo(iguales, ["normal", "holo"])).toEqual({ monto: 1, desde: false });
+  });
+
+  it("ignora las variantes sin precio o que no enlazan con un acabado", () => {
+    expect(precioDeCatalogo(precios, ["holo", "promo"])).toBeNull();
+    expect(precioDeCatalogo(precios, ["holo", "normal"])).toEqual({ monto: 0.5, desde: false });
   });
 });
