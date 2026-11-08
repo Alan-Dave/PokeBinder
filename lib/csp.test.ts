@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { construirCsp, origenSupabase } from "./csp";
+import { construirCsp, nonceDesdeBytes, origenSupabase } from "./csp";
 
 const directiva = (csp: string, nombre: string) =>
   csp
@@ -63,5 +63,56 @@ describe("construirCsp", () => {
 
     expect(directiva(csp, "img-src")).toContain("https://*.supabase.co");
     expect(csp).not.toMatch(/;;|  |; $/);
+  });
+});
+
+describe("construirCsp con nonce (F3)", () => {
+  const nonce = "AAAAAAAAAAAAAAAAAAAAAA==";
+  const csp = construirCsp({ supabaseUrl: "https://abc.supabase.co", nonce });
+
+  it("admite solo los scripts con el nonce y los que ellos carguen, sin unsafe-inline", () => {
+    expect(directiva(csp, "script-src")).toEqual(["'self'", `'nonce-${nonce}'`, "'strict-dynamic'"]);
+    expect(directiva(csp, "script-src")).not.toContain("'unsafe-inline'");
+  });
+
+  it("sin nonce conserva el comportamiento anterior (unsafe-inline)", () => {
+    expect(directiva(construirCsp(), "script-src")).toContain("'unsafe-inline'");
+  });
+
+  it("el resto de directivas no cambia con el nonce", () => {
+    for (const nombre of ["default-src", "img-src", "frame-ancestors", "object-src", "form-action", "base-uri", "connect-src"]) {
+      expect(directiva(csp, nombre)).toEqual(directiva(construirCsp({ supabaseUrl: "https://abc.supabase.co" }), nombre));
+    }
+  });
+
+  it("en desarrollo mantiene eval además del nonce", () => {
+    const dev = construirCsp({ nonce, desarrollo: true });
+
+    expect(directiva(dev, "script-src")).toEqual(["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", "'unsafe-eval'"]);
+  });
+
+  it.each([
+    ["con comillas", "abc'; script-src *; x='"],
+    ["con espacios", "AAAA AAAA AAAA AAAA"],
+    ["con punto y coma", "AAAAAAAAAAAAAAAA;"],
+    ["demasiado corto", "abc"],
+    ["vacío", ""],
+  ])("rechaza un nonce %s antes de que llegue a la cabecera", (_, malo) => {
+    expect(() => construirCsp({ nonce: malo })).toThrow("El nonce de la CSP no es válido.");
+  });
+});
+
+describe("nonceDesdeBytes", () => {
+  it("codifica los bytes en base64 y el resultado es un nonce válido", () => {
+    const bytes = Uint8Array.from({ length: 16 }, (_, i) => i * 15);
+
+    const nonce = nonceDesdeBytes(bytes);
+
+    expect(nonce).toBe(btoa(String.fromCharCode(...bytes)));
+    expect(() => construirCsp({ nonce })).not.toThrow();
+  });
+
+  it("bytes distintos dan nonces distintos", () => {
+    expect(nonceDesdeBytes(new Uint8Array(16).fill(1))).not.toBe(nonceDesdeBytes(new Uint8Array(16).fill(2)));
   });
 });

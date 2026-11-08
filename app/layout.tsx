@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { Baloo_2, Nunito } from "next/font/google";
 import BarraNavegacion from "@/components/BarraNavegacion";
 import "./globals.css";
@@ -29,7 +30,12 @@ export const metadata: Metadata = {
   description: "Gestión de colecciones físicas de Pokémon TCG",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // La política de contenido lleva un nonce distinto en cada petición: una página
+  // generada de antemano no podría llevarlo. Esto hace que todas se rendericen
+  // al pedirse (casi todas ya dependían de la sesión).
+  await connection();
+
   return (
     <html lang="es" className={`${nunito.variable} ${baloo.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
