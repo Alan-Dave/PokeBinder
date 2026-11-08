@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { cerrarSesionAccion } from "@/app/auth/acciones";
+import InterruptorSonido from "@/components/InterruptorSonido";
 import { obtenerPerfilActual } from "@/lib/auth";
 import { enlacesDeNavegacion } from "@/lib/navegacion";
 
@@ -62,7 +63,10 @@ export default async function BarraNavegacion() {
             </Link>
           ))}
         </nav>
-        <div className="hidden lg:block">{sesion}</div>
+        <div className="hidden items-center gap-2 lg:flex">
+          <InterruptorSonido />
+          {sesion}
+        </div>
 
         {/* Pantallas angostas */}
         <details className="relative lg:hidden">
@@ -75,7 +79,10 @@ export default async function BarraNavegacion() {
                 </Link>
               ))}
             </nav>
-            <div className="mt-2 border-t-2 border-tinta pt-3">{sesion}</div>
+            <div className="mt-2 flex flex-col gap-2 border-t-2 border-tinta pt-3">
+              <InterruptorSonido />
+              {sesion}
+            </div>
           </div>
         </details>
       </div>
