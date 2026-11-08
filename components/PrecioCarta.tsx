@@ -1,4 +1,10 @@
-import { formatearUsd, precioDeCatalogo, type PreciosCarta } from "@/lib/precios";
+import {
+  formatearEur,
+  formatearUsd,
+  precioCardmarketCatalogo,
+  precioDeCatalogo,
+  type PreciosCarta,
+} from "@/lib/precios";
 
 type Props = {
   /** Consulta compartida de toda la página; se espera dentro de un <Suspense>. */
@@ -7,28 +13,56 @@ type Props = {
   variantes: readonly string[];
 };
 
-/** Marcador mientras llega el precio: la página no espera a TCGdex para dibujarse. */
+/** Marcador mientras llegan los precios: la página no espera a TCGdex para dibujarse. */
 export function PrecioCartaCargando() {
   return (
-    <span role="status" className="text-base font-bold">
-      <span aria-hidden="true" className="inline-block h-6 w-24 animate-pulse rounded-lg bg-[#e9e9ee] align-middle" />
-      <span className="sr-only">Cargando precio</span>
+    <span role="status" className="flex flex-col gap-1.5">
+      <span aria-hidden="true" className="h-6 w-28 animate-pulse rounded-lg bg-[#e9e9ee]" />
+      <span aria-hidden="true" className="h-6 w-24 animate-pulse rounded-lg bg-[#e9e9ee]" />
+      <span className="sr-only">Cargando precios</span>
+    </span>
+  );
+}
+
+function Fila({ tienda, texto, desde }: { tienda: string; texto: string | null; desde: boolean }) {
+  return (
+    <span className="flex items-baseline justify-between gap-3">
+      <span className="text-sm font-bold">{tienda}</span>
+      {texto === null ? (
+        <span className="text-sm font-bold">Sin precio</span>
+      ) : (
+        <span className="font-titulo text-xl font-extrabold text-precio">
+          {desde && <span className="mr-1 font-sans text-xs font-bold">desde</span>}
+          {texto}
+        </span>
+      )}
     </span>
   );
 }
 
 /**
- * Precio de mercado de una carta del catálogo (TCGplayer, en dólares).
- * Una carta sin precio dice «Sin precio»: nunca se muestra 0 ni se estima.
+ * Precio de una carta del catálogo en cada tienda: TCGplayer (dólares) y
+ * Cardmarket (euros). No se convierten monedas ni se declara cuál es «más
+ * barata»: eso exigiría un tipo de cambio. Una tienda sin precio dice
+ * «Sin precio»; nunca se muestra 0 ni se estima.
  */
 export default async function PrecioCarta({ precios, idApi, variantes }: Props) {
-  const resumen = precioDeCatalogo((await precios).get(idApi), variantes);
+  const de = (await precios).get(idApi);
+  const tcgplayer = precioDeCatalogo(de, variantes);
+  const cardmarket = precioCardmarketCatalogo(de?.cardmarket);
 
-  if (!resumen) return <span className="text-base font-bold">Sin precio</span>;
   return (
-    <span className="font-titulo text-2xl font-extrabold text-precio">
-      {resumen.desde && <span className="mr-1 font-sans text-sm font-bold">desde</span>}
-      {formatearUsd(resumen.monto)}
+    <span className="flex w-full flex-col gap-1">
+      <Fila
+        tienda="TCGplayer"
+        texto={tcgplayer ? formatearUsd(tcgplayer.monto) : null}
+        desde={tcgplayer?.desde ?? false}
+      />
+      <Fila
+        tienda="Cardmarket"
+        texto={cardmarket ? formatearEur(cardmarket.monto) : null}
+        desde={cardmarket?.desde ?? false}
+      />
     </span>
   );
 }
