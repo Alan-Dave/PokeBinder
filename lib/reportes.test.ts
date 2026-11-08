@@ -259,6 +259,15 @@ describe("exportarFaltantes", () => {
     expect(c.from).not.toHaveBeenCalled();
   });
 
+  it("sin sesión responde que falta la sesión aunque los parámetros no sean válidos (F5)", async () => {
+    const { c } = cliente(null, {});
+
+    for (const mala of [{}, { setId: "../x" }, { ...entrada, formato: "pdf" }]) {
+      expect(await exportarFaltantes(mala)).toEqual({ ok: false, error: "Se requiere una sesión iniciada." });
+    }
+    expect(c.from).not.toHaveBeenCalled();
+  });
+
   it("entrega un CSV con nombre fijo y neutraliza fórmulas", async () => {
     cliente({ id: "u1" }, { cartas, inventario: [{ data: [], error: null }], sets: { data: null, error: null } });
 

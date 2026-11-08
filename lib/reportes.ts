@@ -140,11 +140,13 @@ export async function obtenerFaltantes(entrada: unknown): Promise<Resultado<Repo
 const ENCABEZADOS_FALTANTES = ["Número", "Nombre", "Rareza"] as const;
 
 export async function exportarFaltantes(entrada: unknown): Promise<Resultado<Archivo>> {
-  const validado = exportarFaltantesSchema.safeParse(entrada);
-  if (!validado.success) return { ok: false, error: validado.error.issues[0].message };
-
+  // La sesión se comprueba ANTES de validar: un visitante sin sesión recibe 401
+  // aunque sus parámetros estén incompletos, y no se le explica qué faltó.
   const { supabase, user } = await usuarioActual();
   if (!user) return { ok: false, error: SIN_SESION };
+
+  const validado = exportarFaltantesSchema.safeParse(entrada);
+  if (!validado.success) return { ok: false, error: validado.error.issues[0].message };
 
   const resultado = await faltantesDe(validado.data, supabase);
   if (!resultado.ok) return resultado;
