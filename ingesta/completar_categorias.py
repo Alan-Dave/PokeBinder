@@ -124,6 +124,17 @@ def clasificar(
     return resultado, sin_encontrar
 
 
+def resumen_por_set(sin_encontrar: list[str], todos: list[str]) -> list[tuple[str, int, int]]:
+    """(set, sin encontrar, total) de más a menos faltantes. Sirve para ver si faltan sets enteros."""
+
+    def set_de(id_api: str) -> str:
+        return id_api.rsplit("-", 1)[0]
+
+    faltan = Counter(set_de(i) for i in sin_encontrar)
+    totales = Counter(set_de(i) for i in todos)
+    return [(set_id, n, totales[set_id]) for set_id, n in faltan.most_common()]
+
+
 def pedir_json(url: str) -> list[dict]:
     """GET con tiempo máximo y reintentos. Solo https hacia el host de TCGdex."""
     if not url.startswith(f"https://{HOST_API}/"):
@@ -251,10 +262,12 @@ def main() -> int:
     print("Por categoría:", dict(Counter(c.categoria for c in clasificadas.values())))
     print("Con etapa que se completaría:", sum(1 for c in clasificadas.values() if c.stage))
     print(f"Sin encontrar en TCGdex (quedan sin categoría): {len(sin_encontrar)}")
-    for id_api in sin_encontrar[:30]:
+    for id_api in sin_encontrar[:10]:
         print(f"  - {id_api}")
-    if len(sin_encontrar) > 30:
-        print(f"  ... y {len(sin_encontrar) - 30} más")
+    if sin_encontrar:
+        print("Sets con más cartas sin encontrar (set: sin encontrar):")
+        for set_id, n, total in resumen_por_set(sin_encontrar, ids_db)[:40]:
+            print(f"  {set_id}: {n} de {total}")
 
     # Cinturón de seguridad: si TCGdex devolviera casi nada (caída parcial), no
     # se escribe, para no dar por válido un cruce vacío.

@@ -2,7 +2,7 @@
 
 import unittest
 
-from completar_categorias import Clasificacion, clasificar, encontrar_id_tcgdex, variantes_de_id
+from completar_categorias import Clasificacion, clasificar, encontrar_id_tcgdex, resumen_por_set, variantes_de_id
 
 POKEMON = {"swsh1-1", "sv02-011", "sv04.5-101", "base1-4"}
 TRAINER = {"swsh1-163", "sv10-060"}
@@ -76,6 +76,16 @@ class Clasificar(unittest.TestCase):
         res, sin = clasificar(["x-1"], dudosas, set(), {})
         self.assertEqual(res, {})
         self.assertEqual(sin, ["x-1"])
+
+
+class ResumenPorSet(unittest.TestCase):
+    def test_agrupa_lo_que_falta_por_set_de_mas_a_menos(self):
+        todos = ["a-1", "a-2", "a-3", "b-1", "b-2", "c-1"]
+        faltan = ["a-1", "a-2", "b-1"]
+        self.assertEqual(resumen_por_set(faltan, todos), [("a", 2, 3), ("b", 1, 2)])
+
+    def test_sets_con_guion_en_el_nombre(self):
+        self.assertEqual(resumen_por_set(["2018sm-fr-1"], ["2018sm-fr-1", "2018sm-fr-2"]), [("2018sm-fr", 1, 2)])
 
 
 if __name__ == "__main__":
