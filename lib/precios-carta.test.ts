@@ -102,6 +102,18 @@ describe("variantesDeId y relleno de ceros", () => {
     ["sv10-060", ["sv10-060"]],
     ["swsh10.5tg-TG01", ["swsh10.5tg-TG01"]],
     ["base1-58", ["base1-58", "base1-058"]],
+    // Sets de Escarlata y Púrpura con otro nombre en TCGdex.
+    ["sv2-11", ["sv2-11", "sv02-11", "sv02-011"]],
+    ["sv2-011", ["sv2-011", "sv02-011"]],
+    ["sv4pt5-101", ["sv4pt5-101", "sv04.5-101"]],
+    ["sv3pt5-7", ["sv3pt5-7", "sv03.5-7", "sv03.5-007"]],
+    ["sv8pt5-100", ["sv8pt5-100", "sv08.5-100"]],
+    ["sv04.5-101", ["sv04.5-101"]],
+    // No se traduce nada que no esté comprobado.
+    ["swsh9.5tg-TG01", ["swsh9.5tg-TG01"]],
+    ["sv10-060", ["sv10-060"]],
+    ["sv1x-5", ["sv1x-5", "sv1x-005"]],
+    ["singuion", ["singuion"]],
   ])("%s", (id, esperado) => {
     expect(variantesDeId(id)).toEqual(esperado);
   });
