@@ -8,9 +8,9 @@ describe("enlacesDeNavegacion", () => {
     expect(hrefs(enlacesDeNavegacion(false, null))).toEqual(["/catalogo"]);
   });
 
-  it("un usuario normal ve su colección, binders y mazos, pero no la administración", () => {
+  it("un usuario normal ve sus pantallas, pero no la administración", () => {
     const rutas = hrefs(enlacesDeNavegacion(true, "usuario_normal"));
-    expect(rutas).toEqual(["/catalogo", "/coleccion", "/binder", "/mazos"]);
+    expect(rutas).toEqual(["/catalogo", "/coleccion", "/binder", "/mazos", "/dashboard", "/reportes"]);
   });
 
   it("un administrador no ve los enlaces exclusivos del superusuario", () => {

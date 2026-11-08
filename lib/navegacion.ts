@@ -8,6 +8,8 @@ const DE_USUARIO: EnlaceNavegacion[] = [
   { href: "/coleccion", texto: "Mi colección" },
   { href: "/binder", texto: "Mis binders" },
   { href: "/mazos", texto: "Mis mazos" },
+  { href: "/dashboard", texto: "Dashboard" },
+  { href: "/reportes", texto: "Reportes" },
 ];
 
 const DE_SUPERUSUARIO: EnlaceNavegacion[] = [
