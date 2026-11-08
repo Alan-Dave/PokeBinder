@@ -29,8 +29,8 @@ limita tiempo y tamaño (defensa contra SSRF).
 | F1 | No había política de seguridad de contenido (CSP): el propio `next.config.ts` la dejaba pendiente para este PBI | Media | **Corregido**: `lib/csp.ts` + cabecera en `next.config.ts`, con pruebas |
 | F2 | `/api/cartas/[id]/imagen-hd` no exige sesión ni tiene límite de peticiones: cualquiera puede hacer que el servidor pida imágenes a TCGdex | Baja | Mitigado. Id validado, host fijo, tiempo y tamaño máximos, caché, límite propio de 240 peticiones por minuto por IP y cortafuegos de Vercel (verificado en el despliegue). Queda abierto exigir sesión, si se quiere cerrar del todo |
 | F3 | La CSP admite `'unsafe-inline'` en scripts, porque Next.js inyecta scripts propios para hidratar | Baja | Abierto. Una política con nonce exige renderizar todo dinámicamente; mejora futura |
-| F4 | Las páginas protegidas responden 200 con un aviso en vez de redirigir a `/login` | Informativa | Abierto. No expone datos; es de coherencia de la interfaz |
-| F5 | `/reportes/exportar` sin sesión responde 400 (parámetros) en vez de 401 | Informativa | Abierto. No expone datos |
+| F4 | Las páginas protegidas responden 200 con un aviso en vez de redirigir a `/login` | Informativa | **Corregido** (`lib/rutas-protegidas.ts` + `proxy.ts`): un visitante sin ninguna cookie de sesión va al login. Con una cookie vencida o si Supabase falla, la página se sirve y decide ella; las descargas siguen respondiendo 401. Es comodidad, no control de acceso: la sesión y el rol se siguen verificando en el servidor |
+| F5 | `/reportes/exportar` sin sesión responde 400 (parámetros) en vez de 401 | Informativa | **Corregido** (`exportarFaltantes` comprueba la sesión antes de validar): sin sesión responde 401 con cualquier parámetro y no explica qué faltaba |
 
 ## Verificación sobre lo desplegado (8 de noviembre de 2026)
 
