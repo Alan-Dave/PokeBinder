@@ -65,13 +65,32 @@ async function preciosDeCarta(idioma: string, idApi: string): Promise<PreciosCar
 }
 
 /**
- * Nuestro catálogo guarda algunos números sin ceros a la izquierda (sv10-60,
- * swsh11-43) y TCGdex los publica con tres cifras (sv10-060). Se prueba el id
- * tal cual y, si cambia, el rellenado. El resultado sigue cumpliendo idApiSchema.
+ * Los sets de Escarlata y Púrpura se llaman distinto en nuestro catálogo y en
+ * TCGdex: sv2 → sv02, sv4pt5 → sv04.5. Solo se traducen estos (un dígito, con o
+ * sin «pt»), comprobados uno a uno contra TCGdex; cualquier otro set se deja
+ * igual, porque adivinar uno mostraría el precio de otra carta.
+ */
+const SET_ESCARLATA_PURPURA = /^sv(\d)(?:pt(\d))?$/;
+
+function setDeTcgdex(set: string): string {
+  const m = SET_ESCARLATA_PURPURA.exec(set);
+  if (!m) return set;
+  return m[2] ? `sv0${m[1]}.${m[2]}` : `sv0${m[1]}`;
+}
+
+/**
+ * Nuestro catálogo guarda ids que TCGdex escribe distinto: números sin ceros a
+ * la izquierda (sv10-60, swsh11-43; TCGdex usa tres cifras) y algunos sets de
+ * Escarlata y Púrpura (ver setDeTcgdex). Se prueba el id tal cual y después las
+ * formas corregidas. Todas siguen cumpliendo idApiSchema.
  */
 export function variantesDeId(idApi: string): string[] {
-  const rellenado = idApi.replace(/-(\d{1,2})$/, (_, n: string) => `-${n.padStart(3, "0")}`);
-  return rellenado === idApi ? [idApi] : [idApi, rellenado];
+  const corte = idApi.lastIndexOf("-");
+  if (corte < 0) return [idApi];
+  const set = setDeTcgdex(idApi.slice(0, corte));
+  const numero = idApi.slice(corte + 1);
+  const relleno = /^\d{1,2}$/.test(numero) ? numero.padStart(3, "0") : numero;
+  return [...new Set([idApi, `${set}-${numero}`, `${set}-${relleno}`])];
 }
 
 /** Ejecuta `tarea` sobre cada elemento con como mucho `limite` a la vez. */
