@@ -1,11 +1,7 @@
 import Link from "next/link";
 import AgregarAlInventario from "@/components/AgregarAlInventario";
-import {
-  buscarCartas,
-  obtenerFiltros,
-  TAMANO_PAGINA_CATALOGO,
-  urlsImagenesOpcionales,
-} from "@/lib/catalogo";
+import ImagenCarta from "@/components/ImagenCarta";
+import { buscarCartas, obtenerFiltros, TAMANO_PAGINA_CATALOGO, urlsImagenesOpcionales } from "@/lib/catalogo";
 import { IDIOMAS } from "@/lib/validators/catalogo";
 import { CANTIDAD_MAX, CANTIDAD_MIN } from "@/lib/validators/inventario";
 
@@ -29,8 +25,7 @@ function primero(valor: string | string[] | undefined): string {
   return (Array.isArray(valor) ? valor[0] : valor) ?? "";
 }
 
-const CAMPO =
-  "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
+const CAMPO = "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
 
 export default async function CatalogoPage({ searchParams }: { searchParams: Parametros }) {
   const parametros = await searchParams;
@@ -51,7 +46,12 @@ export default async function CatalogoPage({ searchParams }: { searchParams: Par
 
   // Los filtros activos se conservan al cambiar de página.
   const consulta = new URLSearchParams();
-  for (const [clave, valor] of Object.entries({ texto, idioma, tipo, rareza })) {
+  for (const [clave, valor] of Object.entries({
+    texto,
+    idioma,
+    tipo,
+    rareza,
+  })) {
     if (valor) consulta.set(clave, valor);
   }
   const enlacePagina = (n: number) => `/catalogo?${new URLSearchParams([...consulta, ["pagina", String(n)]])}`;
@@ -94,19 +94,11 @@ export default async function CatalogoPage({ searchParams }: { searchParams: Par
                   className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800"
                 >
                   <div className="flex aspect-[5/7] items-center justify-center overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-900">
-                    {url ? (
-                      // La URL está firmada y caduca: el optimizador de next/image
-                      // no aporta nada y cachearía una URL vencida.
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={url}
-                        alt={carta.nombre}
-                        loading="lazy"
-                        className="h-full w-full object-contain"
-                      />
-                    ) : (
-                      <span className="text-sm text-zinc-500">Sin imagen</span>
-                    )}
+                    <ImagenCarta
+                      url={url}
+                      urlRespaldo={`/api/cartas/${carta.id}/imagen-hd?tam=min`}
+                      alt={carta.nombre}
+                    />
                   </div>
                   <div>
                     <Link href={`/catalogo/${carta.id}`} className="font-medium underline-offset-2 hover:underline">

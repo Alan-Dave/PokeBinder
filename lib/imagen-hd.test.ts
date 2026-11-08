@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 
-import { CARPETA_CACHE, idiomasAProbar, rutaCache } from "./imagen-hd";
+import { CARPETA_CACHE, idiomasAProbar, obtenerImagenHd, rutaCache } from "./imagen-hd";
 
 describe("idiomasAProbar", () => {
   it("prueba el idioma de la carta y después el inglés", () => {
@@ -30,8 +30,23 @@ describe("rutaCache", () => {
     expect(path.dirname(ruta)).toBe(CARPETA_CACHE);
   });
 
+  it("distingue la miniatura de la imagen grande", () => {
+    expect(rutaCache("en", "base1-4", "min")).not.toBe(rutaCache("en", "base1-4", "hd"));
+    expect(rutaCache("en", "base1-4")).toBe(rutaCache("en", "base1-4", "hd"));
+  });
+
   it("distingue idiomas y cartas", () => {
     expect(rutaCache("en", "base1-4")).not.toBe(rutaCache("fr", "base1-4"));
     expect(rutaCache("en", "base1-4")).not.toBe(rutaCache("en", "base1-5"));
+  });
+});
+
+describe("obtenerImagenHd con entradas inválidas", () => {
+  it("devuelve null con un tamaño que no está en la lista, sin consultar la base", async () => {
+    expect(await obtenerImagenHd("123", "../../x")).toBeNull();
+  });
+
+  it("devuelve null con un id que no es numérico", async () => {
+    expect(await obtenerImagenHd("1; drop table cartas", "min")).toBeNull();
   });
 });

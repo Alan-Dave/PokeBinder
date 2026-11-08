@@ -1,6 +1,7 @@
 import Link from "next/link";
 import CasillaBinder from "@/components/CasillaBinder";
 import ControlesBinder from "@/components/ControlesBinder";
+import TableroBinder from "@/components/TableroBinder";
 import { listarOpcionesInventario, obtenerBinder, SIN_SESION } from "@/lib/binders";
 import { urlsImagenesOpcionales } from "@/lib/catalogo";
 import { PAGINAS_MAX, PAGINAS_MIN } from "@/lib/validators/binders";
@@ -12,7 +13,11 @@ export const metadata = { title: "Binder · PokeBinder" };
 
 // Las clases de Tailwind deben aparecer completas en el código: no se pueden
 // armar con `grid-cols-${n}`.
-const COLUMNAS: Record<number, string> = { 2: "grid-cols-2", 3: "grid-cols-3", 4: "grid-cols-4" };
+const COLUMNAS: Record<number, string> = {
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+  4: "grid-cols-4",
+};
 
 // La ruta llega como texto: solo dígitos, de 1 a 15, sin ceros a la izquierda.
 function entero(texto: string | undefined): number {
@@ -73,25 +78,37 @@ export default async function BinderDetallePage({
         </p>
       </header>
 
-      <ul className={`grid gap-3 ${COLUMNAS[binder.columnas]}`}>
-        {Array.from({ length: total }, (_, posicion) => {
-          const c = porPosicion.get(posicion);
-          return (
-            <CasillaBinder
-              key={posicion}
-              binderId={binder.id}
-              pagina={pagina}
-              posicion={posicion}
-              carta={
-                c
-                  ? { nombre: c.nombre, idApi: c.idApi, variante: c.variante, imagenUrl: imagenes[c.cartaId] ?? null }
-                  : null
-              }
-              opciones={opciones.ok ? opciones.datos : []}
-            />
-          );
-        })}
-      </ul>
+      <TableroBinder
+        binderId={binder.id}
+        pagina={pagina}
+        ocupadas={casillas.map((c) => c.posicion)}
+        opciones={opciones.ok ? opciones.datos : []}
+      >
+        <ul className={`grid gap-3 ${COLUMNAS[binder.columnas]}`}>
+          {Array.from({ length: total }, (_, posicion) => {
+            const c = porPosicion.get(posicion);
+            return (
+              <CasillaBinder
+                key={posicion}
+                binderId={binder.id}
+                pagina={pagina}
+                posicion={posicion}
+                carta={
+                  c
+                    ? {
+                        nombre: c.nombre,
+                        idApi: c.idApi,
+                        variante: c.variante,
+                        imagenUrl: imagenes[c.cartaId] ?? null,
+                      }
+                    : null
+                }
+                opciones={opciones.ok ? opciones.datos : []}
+              />
+            );
+          })}
+        </ul>
+      </TableroBinder>
 
       <nav aria-label="Páginas del binder" className="flex items-center justify-between text-sm">
         {pagina > 1 ? (
