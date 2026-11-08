@@ -200,6 +200,15 @@ export default async function MazoDetallePage({
         )}
       </section>
 
+      {lineas.length > 0 && (
+        <p className="text-sm">
+          {/* Es una descarga, no una ruta de la aplicación: un <a> evita la precarga de next/link. */}
+          <a href={`/mazos/${mazo.id}/proxies`} download className="underline">
+            Descargar proxies (PDF, 63 × 88 mm)
+          </a>
+        </p>
+      )}
+
       <section aria-labelledby="titulo-buscar" className="flex flex-col gap-3">
         <h2 id="titulo-buscar" className="font-medium">
           Agregar cartas
