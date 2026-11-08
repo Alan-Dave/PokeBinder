@@ -4,6 +4,7 @@ import AgregarAlInventario from "@/components/AgregarAlInventario";
 import ImagenCarta from "@/components/ImagenCarta";
 import PrecioCarta, { PrecioCartaCargando } from "@/components/PrecioCarta";
 import { estiloDeTipo } from "@/lib/estilo-carta";
+import { listarCategorias } from "@/lib/categorias";
 import { buscarCartas, obtenerFiltros, TAMANO_PAGINA_CATALOGO, urlsImagenesOpcionales } from "@/lib/catalogo";
 import { obtenerPreciosCartas } from "@/lib/precios-carta";
 import { IDIOMAS } from "@/lib/validators/catalogo";
@@ -82,6 +83,9 @@ export default async function CatalogoPage({ searchParams }: { searchParams: Par
     // Los precios vienen de TCGdex y pueden tardar: la consulta arranca ya, pero
     // la página no la espera. Cada tarjeta muestra su precio cuando llega.
     const precios = obtenerPreciosCartas(filas.map((f) => ({ idApi: f.id_api, idioma: f.idioma })));
+    // Las categorías son un extra: sin sesión o si fallan, el formulario no las ofrece.
+    const listaCategorias = await listarCategorias();
+    const categorias = listaCategorias.ok ? listaCategorias.datos.map((c) => ({ id: c.id, nombre: c.nombre })) : [];
 
     contenido =
       filas.length === 0 ? (
@@ -136,6 +140,7 @@ export default async function CatalogoPage({ searchParams }: { searchParams: Par
                     variantes={carta.variantes_disponibles}
                     min={CANTIDAD_MIN}
                     max={CANTIDAD_MAX}
+                    categorias={categorias}
                   />
                 </li>
               );
