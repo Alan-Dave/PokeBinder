@@ -75,7 +75,7 @@ Llevan a verificación automática las reglas que hasta ahora solo estaban en
 |---|---|---|
 | `pokebinder-consulta-sin-validar` | Una función de `lib/` con `entrada: unknown` que consulta Supabase sin `safeParse` previo | CWE-20 |
 | `pokebinder-supabase-fuera-de-lib` | Que una página, Server Action o componente importe el cliente de Supabase | CWE-20 |
-| `pokebinder-cliente-admin-acotado` | Usar `createAdminClient()` (salta RLS) fuera de `lib/imagenes.ts` | CWE-250 |
+| `pokebinder-cliente-admin-acotado` | Usar `createAdminClient()` (salta RLS) fuera de `lib/imagenes.ts` y `lib/historial-precios.ts` | CWE-250 |
 | `pokebinder-secreto-en-variable-publica` | Leer un secreto desde una variable `NEXT_PUBLIC_*` | CWE-200 |
 | `pokebinder-html-sin-escapar` | `dangerouslySetInnerHTML`, `innerHTML`, `document.write` | CWE-79 |
 | `pokebinder-ejecucion-dinamica` | `eval`, `new Function` | CWE-95 |
