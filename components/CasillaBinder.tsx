@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { colocarCartaAccion, quitarCartaAccion } from "@/app/binder/acciones";
 import type { EstadoAccion } from "@/app/coleccion/tipos";
+import ImagenCarta from "@/components/ImagenCarta";
 import { useCartaArrastrable, useCasillaSoltable } from "@/components/TableroBinder";
 import { etiquetaVariante } from "@/lib/variantes";
 
@@ -12,6 +13,7 @@ const BOTON =
   "rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800";
 
 type Carta = {
+  id: number;
   nombre: string;
   idApi: string;
   variante: string;
@@ -63,13 +65,12 @@ export default function CasillaBinder({ binderId, pagina, posicion, carta, opcio
               isDragging ? "opacity-40" : ""
             }`}
           >
-            {carta.imagenUrl ? (
-              // La URL está firmada y caduca: next/image la cachearía vencida.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={carta.imagenUrl} alt={carta.nombre} className="h-full w-full object-contain" />
-            ) : (
-              <span className="px-1 text-center text-xs text-zinc-500">Sin imagen</span>
-            )}
+            {/* Bucket primero; si la carta no está ahí, la miniatura de TCGdex (igual que el catálogo). */}
+            <ImagenCarta
+              url={carta.imagenUrl}
+              urlRespaldo={`/api/cartas/${carta.id}/imagen-hd?tam=min`}
+              alt={carta.nombre}
+            />
           </div>
           <div>
             <p className="truncate font-medium">{carta.nombre}</p>
