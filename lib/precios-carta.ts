@@ -3,7 +3,7 @@ import "server-only";
 import type { PreciosCarta } from "@/lib/precios";
 import { descargarPrecios } from "@/lib/tcgdex";
 import { esIdiomaTcgdex, type IdiomaTcgdex } from "@/lib/validators/imagen-hd";
-import { preciosCartasSchema } from "@/lib/validators/precios";
+import { CARTAS_PRECIO_MAX, cartaPrecioSchema } from "@/lib/validators/precios";
 
 /**
  * Precios de mercado de las cartas (PBI-29, RF-07).
@@ -56,10 +56,41 @@ async function consultar(idioma: IdiomaTcgdex, idApi: string): Promise<PreciosCa
 async function preciosDeCarta(idioma: string, idApi: string): Promise<PreciosCarta | null> {
   const idiomas: IdiomaTcgdex[] = esIdiomaTcgdex(idioma) && idioma !== "en" ? [idioma, "en"] : ["en"];
   for (const i of idiomas) {
-    const precios = await consultar(i, idApi);
-    if (precios) return precios;
+    for (const id of variantesDeId(idApi)) {
+      const precios = await consultar(i, id);
+      if (precios) return precios;
+    }
   }
   return null;
+}
+
+/**
+ * Los sets de Escarlata y Púrpura se llaman distinto en nuestro catálogo y en
+ * TCGdex: sv2 → sv02, sv4pt5 → sv04.5. Solo se traducen estos (un dígito, con o
+ * sin «pt»), comprobados uno a uno contra TCGdex; cualquier otro set se deja
+ * igual, porque adivinar uno mostraría el precio de otra carta.
+ */
+const SET_ESCARLATA_PURPURA = /^sv(\d)(?:pt(\d))?$/;
+
+function setDeTcgdex(set: string): string {
+  const m = SET_ESCARLATA_PURPURA.exec(set);
+  if (!m) return set;
+  return m[2] ? `sv0${m[1]}.${m[2]}` : `sv0${m[1]}`;
+}
+
+/**
+ * Nuestro catálogo guarda ids que TCGdex escribe distinto: números sin ceros a
+ * la izquierda (sv10-60, swsh11-43; TCGdex usa tres cifras) y algunos sets de
+ * Escarlata y Púrpura (ver setDeTcgdex). Se prueba el id tal cual y después las
+ * formas corregidas. Todas siguen cumpliendo idApiSchema.
+ */
+export function variantesDeId(idApi: string): string[] {
+  const corte = idApi.lastIndexOf("-");
+  if (corte < 0) return [idApi];
+  const set = setDeTcgdex(idApi.slice(0, corte));
+  const numero = idApi.slice(corte + 1);
+  const relleno = /^\d{1,2}$/.test(numero) ? numero.padStart(3, "0") : numero;
+  return [...new Set([idApi, `${set}-${numero}`, `${set}-${relleno}`])];
 }
 
 /** Ejecuta `tarea` sobre cada elemento con como mucho `limite` a la vez. */
@@ -82,11 +113,17 @@ async function enParalelo<T, R>(items: readonly T[], limite: number, tarea: (ite
  * Quien llama pasa cartas que ya salieron de la base (RLS acotó el acceso).
  */
 export async function obtenerPreciosCartas(entrada: unknown): Promise<Map<string, PreciosCarta | null>> {
-  const validado = preciosCartasSchema.safeParse(entrada);
-  if (!validado.success) return new Map();
+  if (!Array.isArray(entrada) || entrada.length > CARTAS_PRECIO_MAX) return new Map();
+
+  // Cada carta se valida por separado: una con id raro no debe dejar sin
+  // precio a las demás de la página.
+  const validas = entrada.flatMap((c) => {
+    const r = cartaPrecioSchema.safeParse(c);
+    return r.success ? [r.data] : [];
+  });
 
   // Una misma carta puede aparecer en varias variantes: se consulta una vez.
-  const unicas = [...new Map(validado.data.map((c) => [c.idApi, c])).values()];
+  const unicas = [...new Map(validas.map((c) => [c.idApi, c])).values()];
   const resultado = new Map<string, PreciosCarta | null>();
 
   try {

@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { LegalidadCarta } from "@/lib/legalidad";
-import { extraerPrecios, type PreciosCarta } from "@/lib/precios";
+import { extraerCardmarket, extraerPrecios, type PreciosCarta } from "@/lib/precios";
 import { respuestaLegalidadTcgdexSchema } from "@/lib/validators/legalidad";
 import {
   idApiSchema,
@@ -171,7 +171,15 @@ export async function descargarPrecios(idioma: IdiomaTcgdex, idApi: string): Pro
   if (datos === null) return null;
   const carta = respuestaPreciosTcgdexSchema.safeParse(datos);
   if (!carta.success) return null;
-  return extraerPrecios(carta.data.pricing?.tcgplayer);
+  const tcgplayer = extraerPrecios(carta.data.pricing?.tcgplayer);
+  const cardmarket = extraerCardmarket(carta.data.pricing?.cardmarket);
+  if (!tcgplayer && !cardmarket) return null;
+  return {
+    moneda: "USD",
+    actualizado: tcgplayer?.actualizado ?? null,
+    acabados: tcgplayer?.acabados ?? [],
+    cardmarket,
+  };
 }
 
 /**
