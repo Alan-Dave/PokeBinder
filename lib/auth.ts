@@ -2,6 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { loginSchema, registroSchema } from "@/lib/validators/auth";
+import type { Rol } from "@/lib/validators/roles";
 
 /**
  * Registro, inicio y cierre de sesión (PBI-06), con Supabase Auth.
@@ -17,7 +18,7 @@ import { loginSchema, registroSchema } from "@/lib/validators/auth";
 
 export type Resultado<T> = { ok: true; datos: T } | { ok: false; error: string };
 
-export type PerfilActual = { id: string; correo: string | null; nombreVisible: string | null };
+export type PerfilActual = { id: string; correo: string | null; nombreVisible: string | null; rol: Rol | null };
 
 const CREDENCIALES_INVALIDAS = "Correo o contraseña incorrectos.";
 const DEMASIADOS_INTENTOS = "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.";
@@ -97,9 +98,14 @@ export async function obtenerPerfilActual(): Promise<PerfilActual | null> {
   // RLS: cada usuario solo puede leer su propio perfil.
   const { data: perfil } = await supabase
     .from("perfiles")
-    .select("nombre_visible")
+    .select("nombre_visible, rol")
     .eq("id", user.id)
     .maybeSingle();
 
-  return { id: user.id, correo: user.email ?? null, nombreVisible: perfil?.nombre_visible ?? null };
+  return {
+    id: user.id,
+    correo: user.email ?? null,
+    nombreVisible: perfil?.nombre_visible ?? null,
+    rol: perfil?.rol ?? null,
+  };
 }

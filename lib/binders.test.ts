@@ -11,6 +11,7 @@ import {
   crearBinder,
   eliminarBinder,
   listarBinders,
+  moverCarta,
   obtenerBinder,
   quitarCarta,
 } from "./binders";
@@ -218,6 +219,64 @@ describe("quitarCarta", () => {
     expect(llamadas).toContainEqual(["eq", ["binder_id", 1]]);
     expect(llamadas).toContainEqual(["eq", ["pagina", 2]]);
     expect(llamadas).toContainEqual(["eq", ["posicion", 3]]);
+  });
+});
+
+describe("moverCarta", () => {
+  const entrada = { binderId: 1, pagina: 2, desde: 3, hasta: 4 };
+
+  it("actualiza solo la posición de la casilla de origen", async () => {
+    const { llamadas } = clienteFalso({ respuestas: [{ data: { posicion: 4 } }] });
+
+    expect(await moverCarta({ ...entrada, inventario_id: 99, usuario_id: "otro" })).toEqual({ ok: true, datos: null });
+    expect(llamadas).toContainEqual(["update", [{ posicion: 4 }]]);
+    expect(llamadas).toContainEqual(["eq", ["binder_id", 1]]);
+    expect(llamadas).toContainEqual(["eq", ["pagina", 2]]);
+    expect(llamadas).toContainEqual(["eq", ["posicion", 3]]);
+  });
+
+  it("rechaza una casilla de destino ocupada sin reemplazarla", async () => {
+    clienteFalso({ respuestas: [{ error: { code: "23505" } }] });
+
+    expect(await moverCarta(entrada)).toEqual({
+      ok: false,
+      error: "Esa casilla ya está ocupada. Quita su carta o elige una casilla vacía.",
+    });
+  });
+
+  it("informa si la casilla de origen está vacía", async () => {
+    clienteFalso({ respuestas: [{ data: null }] });
+
+    expect(await moverCarta(entrada)).toEqual({ ok: false, error: "La casilla de origen está vacía." });
+  });
+
+  it("traduce el destino fuera de la cuadrícula", async () => {
+    clienteFalso({ respuestas: [{ error: { code: "23514" } }] });
+
+    expect(await moverCarta(entrada)).toEqual({
+      ok: false,
+      error: "Esa casilla no existe en el binder, o el tamaño no es válido.",
+    });
+  });
+
+  it("sin sesión no consulta la base", async () => {
+    const { cliente } = clienteFalso({ usuario: null });
+
+    expect(await moverCarta(entrada)).toEqual({ ok: false, error: SIN_SESION });
+    expect(cliente.from).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["origen y destino iguales", { ...entrada, hasta: 3 }],
+    ["casilla negativa", { ...entrada, desde: -1 }],
+    ["casilla fuera de rango", { ...entrada, hasta: 16 }],
+    ["binder manipulado", { ...entrada, binderId: "1 OR 1=1" }],
+    ["sin campos", {}],
+  ])("rechaza %s sin tocar la base", async (_, malo) => {
+    const { cliente } = clienteFalso();
+
+    expect((await moverCarta(malo)).ok).toBe(false);
+    expect(cliente.from).not.toHaveBeenCalled();
   });
 });
 

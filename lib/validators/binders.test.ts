@@ -6,6 +6,8 @@ import {
   cuadriculaDe,
   dimensionesDe,
   obtenerBinderSchema,
+  PAGINAS_MAX,
+  moverCartaSchema,
   quitarCartaSchema,
 } from "./binders";
 
@@ -80,5 +82,28 @@ describe("colocarCartaSchema y quitarCartaSchema", () => {
   it("rechaza ids que no son enteros positivos", () => {
     expect(colocarCartaSchema.safeParse({ ...valida, inventarioId: 0 }).success).toBe(false);
     expect(colocarCartaSchema.safeParse({ ...valida, inventarioId: "9" }).success).toBe(false);
+  });
+});
+
+describe("moverCartaSchema", () => {
+  const valida = { binderId: 1, pagina: 2, desde: 0, hasta: 15 };
+
+  it("acepta casillas distintas dentro de la cuadrícula más grande", () => {
+    expect(moverCartaSchema.safeParse(valida).success).toBe(true);
+  });
+
+  it("rechaza origen y destino iguales con un mensaje claro", () => {
+    const r = moverCartaSchema.safeParse({ ...valida, hasta: 0 });
+
+    expect(r.success).toBe(false);
+    expect(!r.success && r.error.issues[0].message).toBe("La casilla de origen y la de destino son la misma.");
+  });
+
+  it.each([-1, 16, 1.5, Number.NaN])("rechaza el destino %s", (hasta) => {
+    expect(moverCartaSchema.safeParse({ ...valida, hasta }).success).toBe(false);
+  });
+
+  it.each([0, -1, PAGINAS_MAX + 1, "1"])("rechaza la página %j", (pagina) => {
+    expect(moverCartaSchema.safeParse({ ...valida, pagina }).success).toBe(false);
   });
 });
