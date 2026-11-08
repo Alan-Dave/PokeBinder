@@ -31,7 +31,8 @@ El control de acceso real está en la última capa. Ocultar un botón o redirigi
 auth.users 1──1 perfiles 1──* inventario *──1 cartas *──1 sets
                   │  │              ▲
                   │  ├──* mazos 1──* mazo_cartas *──1 cartas
-                  │  └──* binders 1──* binder_casillas ──► inventario
+                  │  ├──* binders 1──* binder_casillas ──► inventario
+                  │  └──* categorias_coleccion 1──* categoria_cartas ──► inventario
                   └ auditoria (solo inserción, sin clave foránea al usuario)
 ```
 
@@ -42,6 +43,7 @@ auth.users 1──1 perfiles 1──* inventario *──1 cartas *──1 sets
 | `inventario` | Cartas del usuario: variante y cantidad (1–9999). Única por `(usuario, carta, variante)`. | RLS por `usuario_id` con `using` y `with check`. |
 | `mazos`, `mazo_cartas` | Mazos y sus líneas (1–60 copias). | RLS por usuario, también en las líneas. |
 | `binders`, `binder_casillas` | Binder (cuadrícula fija, 1–100 páginas) y casillas que apuntan a una copia del inventario. La clave `(binder, página, posición)` impide dos cartas en una casilla. | RLS por usuario; triggers limitan las copias colocadas a las poseídas. |
+| `categorias_coleccion`, `categoria_cartas` | Categorías propias de la colección («Mis Sylveon», máx. 100 por usuario, nombre único sin distinguir mayúsculas) y qué filas del inventario contiene cada una. Una carta puede estar en varias. | RLS por usuario; `with check` exige que categoría e inventario sean del mismo usuario. |
 | `auditoria` | Bitácora: quién, cuándo, qué acción, sobre qué registro. | Solo inserción: un trigger bloquea `update` y `delete`. La lee únicamente un superusuario, vía `listar_auditoria`. |
 
 Storage tiene dos buckets privados: `Images` (imágenes WebP del catálogo, ~15 KB c/u) y `Assets`. Sin políticas de acceso: el navegador recibe URLs firmadas con vencimiento generadas en el servidor.

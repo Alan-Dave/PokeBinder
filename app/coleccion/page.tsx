@@ -1,9 +1,12 @@
 import Link from "next/link";
 import FilaColeccion from "@/components/FilaColeccion";
+import PanelCategorias from "@/components/PanelCategorias";
+import { categoriasDeCartas, listarCategorias } from "@/lib/categorias";
 import { listarInventario, SIN_SESION, TAMANO_PAGINA } from "@/lib/inventario";
 import { registrarPrecios } from "@/lib/historial-precios";
 import { formatearUsd, precioDeVariante, valorDeColeccion } from "@/lib/precios";
 import { obtenerPreciosCartas } from "@/lib/precios-carta";
+import { NOMBRE_CATEGORIA_MAX } from "@/lib/validators/categorias";
 import { CANTIDAD_MAX, CANTIDAD_MIN } from "@/lib/validators/inventario";
 
 // Depende de la sesión del usuario: nunca se sirve desde una copia en caché.
@@ -14,14 +17,16 @@ export const metadata = { title: "Mi colección · PokeBinder" };
 export default async function ColeccionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ pagina?: string | string[] }>;
+  searchParams: Promise<{ pagina?: string | string[]; categoria?: string | string[] }>;
 }) {
-  const { pagina: paginaBruta } = await searchParams;
+  const { pagina: paginaBruta, categoria: categoriaBruta } = await searchParams;
   const paginaTexto = Array.isArray(paginaBruta) ? paginaBruta[0] : paginaBruta;
   const pagina = paginaTexto === undefined ? 1 : Number(paginaTexto);
+  const categoriaTexto = Array.isArray(categoriaBruta) ? categoriaBruta[0] : categoriaBruta;
+  const categoriaId = categoriaTexto === undefined || categoriaTexto === "" ? undefined : Number(categoriaTexto);
 
   // La validación real la hace listarInventario; el resultado trae el mensaje.
-  const resultado = await listarInventario({ pagina });
+  const resultado = await listarInventario({ pagina, categoriaId });
 
   if (!resultado.ok) {
     return (
@@ -44,6 +49,15 @@ export default async function ColeccionPage({
   }
 
   const { filas, total } = resultado.datos;
+  // Las categorías son un extra: si fallan, la colección se ve igual sin ellas.
+  const [listaCategorias, pertenencia] = await Promise.all([
+    listarCategorias(),
+    categoriasDeCartas(filas.map((f) => f.id)),
+  ]);
+  const categorias = listaCategorias.ok ? listaCategorias.datos : [];
+  const categoriasPorFila = pertenencia.ok ? pertenencia.datos : new Map<number, number[]>();
+  const enlacePagina = (n: number) =>
+    categoriaId ? `/coleccion?categoria=${categoriaId}&pagina=${n}` : `/coleccion?pagina=${n}`;
   const totalPaginas = Math.max(1, Math.ceil(total / TAMANO_PAGINA));
 
   // Precios solo de las cartas de esta página (una página tiene como mucho 30).
@@ -90,9 +104,15 @@ export default async function ColeccionPage({
         )}
       </header>
 
+      {listaCategorias.ok && (
+        <PanelCategorias categorias={categorias} activa={categoriaId ?? null} nombreMax={NOMBRE_CATEGORIA_MAX} />
+      )}
+
       {filas.length === 0 ? (
         <p className="rounded-md border border-dashed border-zinc-300 p-6 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
-          Tu inventario está vacío. Podrás agregar cartas desde el catálogo cuando esté disponible.
+          {categoriaId
+            ? "Esta categoría no tiene cartas todavía. Ábrelas desde «Todas» y márcalas en «Categorías»."
+            : "Tu inventario está vacío. Podrás agregar cartas desde el catálogo cuando esté disponible."}
         </p>
       ) : (
         <ul className="flex flex-col gap-3">
@@ -103,6 +123,8 @@ export default async function ColeccionPage({
               min={CANTIDAD_MIN}
               max={CANTIDAD_MAX}
               precio={textosPrecio[i]}
+              categorias={categorias}
+              categoriasDeLaFila={categoriasPorFila.get(fila.id) ?? []}
             />
           ))}
         </ul>
@@ -111,7 +133,7 @@ export default async function ColeccionPage({
       {totalPaginas > 1 && (
         <nav aria-label="Paginación" className="flex items-center justify-between text-sm">
           {pagina > 1 ? (
-            <Link href={`/coleccion?pagina=${pagina - 1}`} className="underline">
+            <Link href={enlacePagina(pagina - 1)} className="underline">
               ← Anterior
             </Link>
           ) : (
@@ -121,7 +143,7 @@ export default async function ColeccionPage({
             Página {pagina} de {totalPaginas}
           </span>
           {pagina < totalPaginas ? (
-            <Link href={`/coleccion?pagina=${pagina + 1}`} className="underline">
+            <Link href={enlacePagina(pagina + 1)} className="underline">
               Siguiente →
             </Link>
           ) : (
