@@ -176,3 +176,78 @@ describe("agregarCartaAccion", () => {
     expect(cliente.from).not.toHaveBeenCalled();
   });
 });
+
+describe("agregarCartaAccion con categoría (PBI-X8)", () => {
+  const CAMPOS = { cartaId: "10", variante: "normal", cantidad: "1" };
+
+  /** Cliente donde cada tabla responde distinto: sirve para hacer fallar solo la asignación. */
+  function sesionPorTabla(respuestas: Record<string, { data?: unknown; error?: { code: string } | null }>) {
+    const tablas: string[] = [];
+    const cliente = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "u1" } } }) },
+      from: vi.fn((tabla: string) => {
+        tablas.push(tabla);
+        const r = { data: null, error: null, ...respuestas[tabla] };
+        const consulta: Record<string, unknown> = {};
+        for (const m of ["insert", "select"]) consulta[m] = () => consulta;
+        consulta.single = () => Promise.resolve(r);
+        consulta.then = (resolver: (v: unknown) => unknown) => Promise.resolve(r).then(resolver);
+        return consulta;
+      }),
+    };
+    vi.mocked(createClient).mockResolvedValue(cliente as never);
+    return { cliente, tablas };
+  }
+
+  it("agrega la carta y la asigna a la categoría elegida", async () => {
+    const { tablas } = sesionPorTabla({ inventario: { data: { id: 55 } } });
+
+    const estado = await agregarCartaAccion(INICIAL, formulario({ ...CAMPOS, categoriaId: "3" }));
+
+    expect(estado).toEqual({ error: null, exito: true });
+    expect(tablas).toEqual(["inventario", "categoria_cartas"]);
+  });
+
+  it.each([undefined, ""])("sin categoría (%j) no toca la tabla de categorías", async (categoriaId) => {
+    const { tablas } = sesionPorTabla({ inventario: { data: { id: 55 } } });
+    const campos = categoriaId === undefined ? CAMPOS : { ...CAMPOS, categoriaId };
+
+    expect(await agregarCartaAccion(INICIAL, formulario(campos))).toEqual({ error: null, exito: true });
+    expect(tablas).toEqual(["inventario"]);
+  });
+
+  it.each([
+    ["texto", "abc"],
+    ["cero", "0"],
+    ["negativa", "-2"],
+    ["decimal", "1.5"],
+    ["inyección", "1 OR 1=1"],
+  ])("rechaza una categoría %s ANTES de agregar la carta", async (_, categoriaId) => {
+    const { cliente } = sesionPorTabla({});
+
+    const estado = await agregarCartaAccion(INICIAL, formulario({ ...CAMPOS, categoriaId }));
+
+    expect(estado.exito).toBe(false);
+    expect(estado.error).toBeTruthy();
+    expect(cliente.from).not.toHaveBeenCalled();
+  });
+
+  it("si la categoría es ajena (RLS la rechaza), la carta queda agregada y se avisa", async () => {
+    sesionPorTabla({ inventario: { data: { id: 55 } }, categoria_cartas: { error: { code: "42501" } } });
+
+    const estado = await agregarCartaAccion(INICIAL, formulario({ ...CAMPOS, categoriaId: "999" }));
+
+    expect(estado.exito).toBe(true);
+    expect(estado.error).toContain("Se agregó a tu colección, pero no a la categoría");
+    expect(estado.error).toContain("No tienes permiso");
+  });
+
+  it("si agregar la carta falla, no intenta asignar la categoría", async () => {
+    const { tablas } = sesionPorTabla({ inventario: { error: { code: "23505" } } });
+
+    const estado = await agregarCartaAccion(INICIAL, formulario({ ...CAMPOS, categoriaId: "3" }));
+
+    expect(estado.exito).toBe(false);
+    expect(tablas).toEqual(["inventario"]);
+  });
+});

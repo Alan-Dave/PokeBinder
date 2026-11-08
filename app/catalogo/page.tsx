@@ -2,6 +2,7 @@ import Link from "next/link";
 import AgregarAlInventario from "@/components/AgregarAlInventario";
 import ImagenCarta from "@/components/ImagenCarta";
 import { estiloDeTipo } from "@/lib/estilo-carta";
+import { listarCategorias } from "@/lib/categorias";
 import { buscarCartas, obtenerFiltros, TAMANO_PAGINA_CATALOGO, urlsImagenesOpcionales } from "@/lib/catalogo";
 import { IDIOMAS } from "@/lib/validators/catalogo";
 import { CANTIDAD_MAX, CANTIDAD_MIN } from "@/lib/validators/inventario";
@@ -76,6 +77,9 @@ export default async function CatalogoPage({ searchParams }: { searchParams: Par
 
     // Las imágenes son un extra: sin ellas la página se muestra con un marcador.
     const imagenes = await urlsImagenesOpcionales(filas.map((f) => f.id));
+    // Las categorías son un extra: sin sesión o si fallan, el formulario no las ofrece.
+    const listaCategorias = await listarCategorias();
+    const categorias = listaCategorias.ok ? listaCategorias.datos.map((c) => ({ id: c.id, nombre: c.nombre })) : [];
 
     contenido =
       filas.length === 0 ? (
@@ -125,6 +129,7 @@ export default async function CatalogoPage({ searchParams }: { searchParams: Par
                     variantes={carta.variantes_disponibles}
                     min={CANTIDAD_MIN}
                     max={CANTIDAD_MAX}
+                    categorias={categorias}
                   />
                 </li>
               );
