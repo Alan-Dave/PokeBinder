@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Baloo_2, Nunito } from "next/font/google";
 import BarraNavegacion from "@/components/BarraNavegacion";
+import SonidoInteraccion from "@/components/SonidoInteraccion";
 import "./globals.css";
 
 // Las fuentes se descargan al compilar y se sirven desde el propio dominio:
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="es" className={`${nunito.variable} ${baloo.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <BarraNavegacion />
+        <SonidoInteraccion />
         {children}
       </body>
     </html>
