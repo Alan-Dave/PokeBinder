@@ -14,6 +14,8 @@ import type { CartaPanel } from "@/lib/panel-coleccion";
 type Props = {
   categorias: Array<{ id: number; nombre: string }>;
   renderCarta: (carta: CartaPanel) => ReactNode;
+  /** Columnas de la lista según el ancho disponible. El binder usa un panel angosto; los mazos, uno ancho. */
+  columnas?: string;
 };
 
 type Estado = {
@@ -31,7 +33,7 @@ const ESPERA_BUSQUEDA_MS = 300;
 
 const CAMPO = "w-full rounded-xl border-[3px] border-tinta bg-white px-3 py-1.5 text-base text-tinta";
 
-export default function PanelColeccion({ categorias, renderCarta }: Props) {
+export default function PanelColeccion({ categorias, renderCarta, columnas = "grid-cols-2" }: Props) {
   const idBusqueda = useId();
   const idCategoria = useId();
   const [texto, setTexto] = useState("");
@@ -145,7 +147,7 @@ export default function PanelColeccion({ categorias, renderCarta }: Props) {
         </p>
       )}
 
-      <ul className="grid max-h-[32rem] grid-cols-2 gap-2 overflow-y-auto pr-1">
+      <ul className={`grid max-h-[32rem] gap-2 overflow-y-auto pr-1 ${columnas}`}>
         {cartas.map((carta) => (
           <li key={carta.inventarioId}>{renderCarta(carta)}</li>
         ))}
