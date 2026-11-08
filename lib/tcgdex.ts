@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { LegalidadCarta } from "@/lib/legalidad";
+import { respuestaLegalidadTcgdexSchema } from "@/lib/validators/legalidad";
 import {
   idApiSchema,
   respuestaCartaTcgdexSchema,
@@ -137,4 +139,31 @@ export async function descargarImagenAltaDefinicion(
   const imagen = await pedir(urlImagen, BYTES_MAXIMOS_IMAGEN);
   if (!imagen || !esWebp(imagen)) return null;
   return imagen;
+}
+
+/**
+ * Pide a TCGdex la legalidad de una carta (campo "legal"). Devuelve null si la
+ * carta no existe en ese idioma, la respuesta no es válida o TCGdex no informó
+ * ningún formato: quien llama lo trata como «no verificable», nunca como legal.
+ */
+export async function descargarLegalidad(idioma: IdiomaTcgdex, idApi: string): Promise<LegalidadCarta | null> {
+  const url = urlCarta(idioma, idApi);
+  if (!url) return null;
+
+  const json = await pedir(url, BYTES_MAXIMOS_JSON);
+  if (!json) return null;
+
+  let datos: unknown;
+  try {
+    datos = JSON.parse(new TextDecoder().decode(json));
+  } catch {
+    return null;
+  }
+  const carta = respuestaLegalidadTcgdexSchema.safeParse(datos);
+  if (!carta.success) return null;
+
+  const standard = carta.data.legal?.standard ?? null;
+  const expanded = carta.data.legal?.expanded ?? null;
+  if (standard === null && expanded === null) return null;
+  return { standard, expanded };
 }
