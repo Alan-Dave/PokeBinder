@@ -13,6 +13,7 @@ import {
   expandirCopias,
   marcasDeCorte,
   mm,
+  nombreParaProxy,
   paginar,
   PAGINA_ALTO_MM,
   PAGINA_ANCHO_MM,
@@ -210,8 +211,8 @@ export async function generarProxiesMazo(entrada: unknown): Promise<Resultado<{ 
         const { x, y } = posiciones[i];
         const imagen = incrustadas.get(carta.cartaId);
         if (imagen) pagina.drawImage(imagen, { x, y, width: mm(CARTA_ANCHO_MM), height: mm(CARTA_ALTO_MM) });
-        else if (ilustracion) dibujarSinImagen(pagina, fuente, ilustracion, x, y, carta.nombre);
-        else dibujarMarcador(pagina, fuente, x, y, carta.nombre);
+        else if (ilustracion) dibujarSinImagen(pagina, fuente, ilustracion, x, y, nombreParaProxy(carta.nombre, carta.nombreEn));
+        else dibujarMarcador(pagina, fuente, x, y, nombreParaProxy(carta.nombre, carta.nombreEn));
       });
 
       for (const m of marcas) {

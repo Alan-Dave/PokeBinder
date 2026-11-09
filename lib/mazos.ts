@@ -144,6 +144,8 @@ export type LineaMazo = {
   idioma: string;
   /** Etapa propia o, si falta, la de la edición en inglés. */
   stage: string | null;
+  /** Nombre de la edición en inglés, para cuando el propio no sirve para identificar la carta. */
+  nombreEn?: string | null;
 };
 
 export type MazoDetalle = {
@@ -249,6 +251,7 @@ export async function obtenerMazo(entrada: unknown): Promise<Resultado<MazoDetal
       idApi: f.cartas.id_api,
       idioma: f.cartas.idioma,
       stage,
+      nombreEn: en?.nombre ?? null,
     });
     return {
       cartaId: f.carta_id,
