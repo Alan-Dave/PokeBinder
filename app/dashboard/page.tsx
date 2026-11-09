@@ -25,7 +25,7 @@ export default async function DashboardPage() {
           {resultado.error === SIN_SESION ? "Inicia sesión para ver tu dashboard." : resultado.error}
         </p>
         {resultado.error === SIN_SESION && (
-          <Link href="/login" className="text-sm underline">
+          <Link href="/login" className="text-sm font-bold text-azul underline">
             Ir a iniciar sesión
           </Link>
         )}
@@ -51,8 +51,8 @@ export default async function DashboardPage() {
           ["Valor estimado", dinero.format(resumen.valorEstimado)],
           ["Sets completos", String(analisis.completos)],
         ].map(([etiqueta, valor]) => (
-          <div key={etiqueta} className="rounded-md border border-zinc-300 p-4 dark:border-zinc-700">
-            <dt className="text-sm text-zinc-600 dark:text-zinc-400">{etiqueta}</dt>
+          <div key={etiqueta} className="tarjeta p-4">
+            <dt className="text-sm text-tinta/75">{etiqueta}</dt>
             <dd className="text-2xl font-semibold">{valor}</dd>
           </div>
         ))}
@@ -67,7 +67,7 @@ export default async function DashboardPage() {
             <li key={o}>{o}</li>
           ))}
         </ul>
-        <p className="text-xs text-zinc-600 dark:text-zinc-400">
+        <p className="text-xs text-tinta/75">
           Calculado en el servidor con tu inventario; no se envía a servicios externos.
         </p>
       </section>
@@ -81,14 +81,14 @@ export default async function DashboardPage() {
             <GraficoBarras titulo="Copias por idioma" datos={idiomas} unidad="copias" />
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-zinc-300 dark:border-zinc-700">
+                <tr className="border-b-[3px] border-tinta">
                   <th className="py-2 pr-4">Idioma</th>
                   <th className="py-2">Copias</th>
                 </tr>
               </thead>
               <tbody>
                 {idiomas.map((i) => (
-                  <tr key={i.etiqueta} className="border-b border-zinc-200 dark:border-zinc-800">
+                  <tr key={i.etiqueta} className="border-b-2 border-tinta/20">
                     <td className="py-2 pr-4">{i.etiqueta}</td>
                     <td className="py-2">{i.valor}</td>
                   </tr>
@@ -104,7 +104,7 @@ export default async function DashboardPage() {
             <GraficoBarras titulo="Copias por set" datos={sets} unidad="copias" />
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-zinc-300 dark:border-zinc-700">
+                <tr className="border-b-[3px] border-tinta">
                   <th className="py-2 pr-4">Set</th>
                   <th className="py-2 pr-4">Idioma</th>
                   <th className="py-2 pr-4">Copias</th>
@@ -113,7 +113,7 @@ export default async function DashboardPage() {
               </thead>
               <tbody>
                 {analisis.sets.map((s) => (
-                  <tr key={`${s.setId}|${s.idioma}`} className="border-b border-zinc-200 dark:border-zinc-800">
+                  <tr key={`${s.setId}|${s.idioma}`} className="border-b-2 border-tinta/20">
                     <td className="py-2 pr-4">{resumen.nombresSet[`${s.setId}|${s.idioma}`] ?? s.setId}</td>
                     <td className="py-2 pr-4">{idiomaLegible(s.idioma)}</td>
                     <td className="py-2 pr-4">{s.copias}</td>
@@ -128,7 +128,7 @@ export default async function DashboardPage() {
         </>
       )}
 
-      <Link href="/reportes" className="text-sm underline">
+      <Link href="/reportes" className="text-sm font-bold text-azul underline">
         Ver reportes detallados y faltantes
       </Link>
     </main>

@@ -2,9 +2,14 @@
 // para poder probarla sin base de datos.
 //
 // Solo se validan las reglas que el catálogo permite comprobar con certeza.
-// El catálogo no trae la categoría (Pokémon, Entrenador, Energía) de la mayoría
-// de las cartas: lo que no se puede comprobar se devuelve como advertencia y
-// nunca como aprobado. No se infiere ni se inventa ningún dato.
+// La categoría (Pokémon, Entrenador, Energía) y la etapa las completa
+// ingesta/completar_categorias.py con datos de TCGdex (PBI-X14); mientras una
+// carta no las tenga, lo que no se puede comprobar se devuelve como advertencia
+// y nunca como aprobado. No se infiere ni se inventa ningún dato.
+//
+// Las reglas oficiales no limitan cuántas Energías ni cuántos Partidarios lleva
+// un mazo, así que no se validan: la categoría sirve para saber qué carta es una
+// energía básica y qué carta puede ser un Pokémon Básico.
 
 export const TAMANO_MAZO = 60;
 export const COPIAS_MAX = 4;
@@ -35,7 +40,13 @@ export type EntradaMazo = {
   /** Etapa o categoría; null cuando el catálogo no la trae. */
   stage: string | null;
   subtipos: string[];
+  /** Categoría según TCGdex; null mientras no se haya completado. */
+  categoria?: CategoriaCarta | null;
+  /** Solo en energías: true si es básica; null si no se sabe. */
+  energiaBasica?: boolean | null;
 };
+
+export type CategoriaCarta = "Pokemon" | "Trainer" | "Energy";
 
 export type ReglaMazo = "tamano" | "copias" | "radiant" | "ace-spec" | "basico";
 
@@ -56,9 +67,37 @@ function claveNombre(entrada: EntradaMazo): string {
   return (entrada.nombreEn ?? entrada.nombre).trim().toLowerCase();
 }
 
+/**
+ * Energía básica (sin límite de copias). Si el catálogo ya dice si lo es, manda
+ * ese dato; si no, se reconoce por el nombre en inglés de las 8 básicas.
+ */
+function esEnergiaBasica(entrada: EntradaMazo): boolean {
+  if (entrada.energiaBasica === true) return entrada.categoria === "Energy";
+  if (entrada.energiaBasica === false) return false;
+  return ENERGIAS_BASICAS.has(claveNombre(entrada));
+}
+
+/**
+ * Una carta que NO puede ser un Pokémon Básico con certeza: es Entrenador o
+ * Energía, o tiene una etapa conocida que no es básica. Si falta la etapa de
+ * algo que podría ser Pokémon, no se sabe.
+ */
+function sabemosQueNoEsBasico(entrada: EntradaMazo): boolean {
+  if (entrada.categoria === "Trainer" || entrada.categoria === "Energy") return true;
+  return entrada.stage !== null && !ETAPAS_BASICAS.has(entrada.stage.toLowerCase());
+}
+
 function tieneSubtipo(entrada: EntradaMazo, subtipo: string): boolean {
   const buscado = subtipo.toLowerCase();
   return entrada.subtipos.some((s) => s.toLowerCase() === buscado);
+}
+
+/** «A», «A y B», «A, B y C» o «A, B, C y 2 más»: nombra hasta tres y cuenta el resto. */
+function listaDeNombres(nombres: readonly string[], maximo = 3): string {
+  const unicos = [...new Set(nombres)];
+  if (unicos.length === 1) return unicos[0];
+  if (unicos.length <= maximo) return `${unicos.slice(0, -1).join(", ")} y ${unicos[unicos.length - 1]}`;
+  return `${unicos.slice(0, maximo).join(", ")} y ${unicos.length - maximo} más`;
 }
 
 function plural(n: number, singular: string, plural: string): string {
@@ -85,15 +124,19 @@ export function validarMazo(entradas: readonly EntradaMazo[]): ResultadoReglas {
 
   // Copias: máximo 4 por nombre, sin contar las energías básicas. Ediciones e
   // idiomas distintos de una misma carta suman juntos.
-  const porNombre = new Map<string, { nombre: string; copias: number }>();
+  const porNombre = new Map<string, { nombre: string; copias: number; basica: boolean }>();
   for (const e of entradas) {
     const clave = claveNombre(e);
     const actual = porNombre.get(clave);
-    if (actual) actual.copias += e.cantidad;
-    else porNombre.set(clave, { nombre: e.nombre, copias: e.cantidad });
+    if (actual) {
+      actual.copias += e.cantidad;
+      actual.basica = actual.basica && esEnergiaBasica(e);
+    } else {
+      porNombre.set(clave, { nombre: e.nombre, copias: e.cantidad, basica: esEnergiaBasica(e) });
+    }
   }
-  for (const [clave, { nombre, copias }] of porNombre) {
-    if (ENERGIAS_BASICAS.has(clave) || copias <= COPIAS_MAX) continue;
+  for (const { nombre, copias, basica } of porNombre.values()) {
+    if (basica || copias <= COPIAS_MAX) continue;
     errores.push({
       regla: "copias",
       mensaje: `${nombre}: tienes ${copias} copias y el máximo es ${COPIAS_MAX}.`,
@@ -119,11 +162,11 @@ export function validarMazo(entradas: readonly EntradaMazo[]): ResultadoReglas {
   if (total > 0) {
     const hayBasico = entradas.some((e) => e.stage !== null && ETAPAS_BASICAS.has(e.stage.toLowerCase()));
     if (!hayBasico) {
-      const sinEtapa = entradas.filter((e) => e.stage === null).length;
-      if (sinEtapa > 0) {
+      const sinDato = entradas.filter((e) => !sabemosQueNoEsBasico(e));
+      if (sinDato.length > 0) {
         advertencias.push({
           regla: "basico",
-          mensaje: `No se pudo comprobar que el mazo tenga un Pokémon Básico: el catálogo no trae la categoría de ${sinEtapa} de las ${plural(entradas.length, "carta distinta", "cartas distintas")} del mazo.`,
+          mensaje: `No se pudo comprobar que el mazo tenga un Pokémon Básico porque el catálogo no tiene la categoría o la etapa de ${listaDeNombres(sinDato.map((e) => e.nombre))}. Confirma tú que alguna lo sea.`,
         });
       } else {
         errores.push({ regla: "basico", mensaje: "El mazo necesita al menos un Pokémon Básico." });
@@ -133,3 +176,17 @@ export function validarMazo(entradas: readonly EntradaMazo[]): ResultadoReglas {
 
   return { total, errores, advertencias, cumple: errores.length === 0 };
 }
+
+/**
+ * Separa el avance del mazo de sus errores. Un mazo con menos de 60 cartas no es
+ * un error del usuario sino un mazo a medio armar: lo que falta se muestra como
+ * progreso, y solo lo que de verdad está mal (de más, repetido, prohibido) como error.
+ * El resultado de validarMazo no cambia: cumple sigue siendo false hasta llegar a 60.
+ */
+export function separarProgreso(r: ResultadoReglas): { faltan: number; errores: Incumplimiento[] } {
+  return {
+    faltan: Math.max(0, TAMANO_MAZO - r.total),
+    errores: r.errores.filter((e) => !(e.regla === "tamano" && r.total < TAMANO_MAZO)),
+  };
+}
+

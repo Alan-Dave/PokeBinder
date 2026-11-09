@@ -1,16 +1,9 @@
 import type { NextConfig } from "next";
-import { construirCsp } from "./lib/csp";
 
 // Cabeceras de seguridad para todas las respuestas. La política de contenido
-// (CSP) y sus límites están explicados en lib/csp.ts (PBI-27).
+// (CSP) NO está aquí: lleva un valor distinto en cada petición (nonce), así que
+// la envía proxy.ts. Sus límites están explicados en lib/csp.ts (PBI-27).
 const securityHeaders = [
-  {
-    key: "Content-Security-Policy",
-    value: construirCsp({
-      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
-      desarrollo: process.env.NODE_ENV !== "production",
-    }),
-  },
   // Impide que otro sitio incruste la aplicación en un iframe (clickjacking).
   { key: "X-Frame-Options", value: "DENY" },
   // Impide que el navegador reinterprete el tipo de un archivo.

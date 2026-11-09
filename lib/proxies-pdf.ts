@@ -5,6 +5,7 @@ import sharp from "sharp";
 import { urlsImagenesOpcionales } from "@/lib/catalogo";
 import { publicEnv } from "@/lib/env";
 import { obtenerImagenHd } from "@/lib/imagen-hd";
+import { IMAGEN_NO_DISPONIBLE_BASE64 } from "@/lib/imagen-no-disponible-datos";
 import { obtenerMazo } from "@/lib/mazos";
 import {
   CARTA_ALTO_MM,
@@ -12,6 +13,7 @@ import {
   expandirCopias,
   marcasDeCorte,
   mm,
+  nombreParaProxy,
   paginar,
   PAGINA_ALTO_MM,
   PAGINA_ANCHO_MM,
@@ -109,6 +111,7 @@ async function enParalelo<T, R>(items: readonly T[], limite: number, tarea: (ite
   return resultados;
 }
 
+/** Último recurso si la ilustración no pudo prepararse: un recuadro con el nombre. */
 function dibujarMarcador(pagina: ReturnType<PDFDocument["addPage"]>, fuente: PDFFont, x: number, y: number, nombre: string) {
   const ancho = mm(CARTA_ANCHO_MM);
   const alto = mm(CARTA_ALTO_MM);
@@ -119,6 +122,42 @@ function dibujarMarcador(pagina: ReturnType<PDFDocument["addPage"]>, fuente: PDF
   while (recortado.length > 1 && fuente.widthOfTextAtSize(recortado, 10) > ancho - 12) recortado = recortado.slice(0, -1);
   pagina.drawText(recortado, { x: x + 6, y: y + alto / 2, size: 10, font: fuente, color: rgb(0.2, 0.2, 0.2) });
   pagina.drawText("Sin imagen", { x: x + 6, y: y + alto / 2 - 14, size: 8, font: fuente, color: rgb(0.45, 0.45, 0.45) });
+}
+
+/**
+ * Carta sin imagen: la ilustración de «Imagen no disponible» a tamaño de carta
+ * y, encima, el nombre en la franja vacía de abajo. Sin el nombre el proxy no
+ * serviría para jugar.
+ */
+function dibujarSinImagen(
+  pagina: ReturnType<PDFDocument["addPage"]>,
+  fuente: PDFFont,
+  ilustracion: PDFImage,
+  x: number,
+  y: number,
+  nombre: string,
+) {
+  const ancho = mm(CARTA_ANCHO_MM);
+  const alto = mm(CARTA_ALTO_MM);
+  pagina.drawImage(ilustracion, { x, y, width: ancho, height: alto });
+  pagina.drawRectangle({ x, y, width: ancho, height: alto, borderColor: rgb(0.5, 0.5, 0.5), borderWidth: 0.75 });
+
+  // Se achica la letra hasta que quepa y, si aun así no cabe, se recorta:
+  // pdf-lib no ajusta el texto por su cuenta.
+  const texto = textoSeguro(nombre);
+  const maximo = ancho - 16;
+  let tamano = 11;
+  while (tamano > 6 && fuente.widthOfTextAtSize(texto, tamano) > maximo) tamano -= 0.5;
+  let recortado = texto;
+  while (recortado.length > 1 && fuente.widthOfTextAtSize(recortado, tamano) > maximo) recortado = recortado.slice(0, -1);
+  const largo = fuente.widthOfTextAtSize(recortado, tamano);
+  pagina.drawText(recortado, {
+    x: x + (ancho - largo) / 2,
+    y: y + alto * 0.07,
+    size: tamano,
+    font: fuente,
+    color: rgb(0.1, 0.1, 0.2),
+  });
 }
 
 export async function generarProxiesMazo(entrada: unknown): Promise<Resultado<{ pdf: Uint8Array; nombre: string }>> {
@@ -156,6 +195,13 @@ export async function generarProxiesMazo(entrada: unknown): Promise<Resultado<{ 
     const incrustadas = new Map<number, PDFImage>();
     for (const [id, bytes] of imagenes) if (bytes) incrustadas.set(id, await doc.embedPng(bytes));
 
+    // La ilustración de reemplazo solo se incrusta si alguna carta la necesita.
+    let ilustracion: PDFImage | null = null;
+    if (cartas.some((c) => !incrustadas.has(c.cartaId))) {
+      const png = await aPng(new Uint8Array(Buffer.from(IMAGEN_NO_DISPONIBLE_BASE64, "base64")));
+      if (png) ilustracion = await doc.embedPng(png);
+    }
+
     const posiciones = posicionesPagina();
     const marcas = marcasDeCorte();
     for (const hoja of paginar(cartas)) {
@@ -165,7 +211,8 @@ export async function generarProxiesMazo(entrada: unknown): Promise<Resultado<{ 
         const { x, y } = posiciones[i];
         const imagen = incrustadas.get(carta.cartaId);
         if (imagen) pagina.drawImage(imagen, { x, y, width: mm(CARTA_ANCHO_MM), height: mm(CARTA_ALTO_MM) });
-        else dibujarMarcador(pagina, fuente, x, y, carta.nombre);
+        else if (ilustracion) dibujarSinImagen(pagina, fuente, ilustracion, x, y, nombreParaProxy(carta.nombre, carta.nombreEn));
+        else dibujarMarcador(pagina, fuente, x, y, nombreParaProxy(carta.nombre, carta.nombreEn));
       });
 
       for (const m of marcas) {

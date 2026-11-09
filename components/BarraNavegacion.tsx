@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import { cerrarSesionAccion } from "@/app/auth/acciones";
+import InterruptorSonido from "@/components/InterruptorSonido";
 import { obtenerPerfilActual } from "@/lib/auth";
 import { enlacesDeNavegacion } from "@/lib/navegacion";
 
@@ -16,11 +18,16 @@ export default async function BarraNavegacion() {
   const enlaces = enlacesDeNavegacion(perfil !== null, perfil?.rol ?? null);
 
   const sesion = perfil ? (
-    <form action={cerrarSesionAccion}>
-      <button type="submit" className="boton boton-neutro !py-1.5 text-base">
-        Cerrar sesión
-      </button>
-    </form>
+    <div className="flex items-center gap-2">
+      <Link href="/cuenta" className={ENLACE}>
+        Mi cuenta
+      </Link>
+      <form action={cerrarSesionAccion}>
+        <button type="submit" className="boton boton-neutro !py-1.5 text-base">
+          Cerrar sesión
+        </button>
+      </form>
+    </div>
   ) : (
     <div className="flex items-center gap-2">
       <Link href="/login" className={ENLACE}>
@@ -35,26 +42,34 @@ export default async function BarraNavegacion() {
   return (
     <header className="sticky top-0 z-40 border-b-4 border-tinta bg-crema">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-        <Link href="/" className="flex items-center gap-2 font-titulo text-2xl font-extrabold">
-          <span
-            aria-hidden="true"
-            className="inline-block h-7 w-5 -rotate-6 rounded-md border-[3px] border-tinta bg-rojo shadow-[2px_2px_0_var(--tinta)]"
+        <Link href="/" className="flex items-center rounded-xl">
+          {/* El texto alternativo es el nombre accesible del enlace a la portada. */}
+          <Image
+            src="/logo.png"
+            alt="PokeBinder"
+            width={960}
+            height={426}
+            priority
+            sizes="136px"
+            className="h-12 w-auto sm:h-14"
           />
-          PokeBinder
         </Link>
 
         {/* Pantallas anchas */}
-        <nav aria-label="Principal" className="hidden items-center gap-1 md:flex">
+        <nav aria-label="Principal" className="hidden items-center gap-1 lg:flex">
           {enlaces.map((e) => (
             <Link key={e.href} href={e.href} className={ENLACE}>
               {e.texto}
             </Link>
           ))}
         </nav>
-        <div className="hidden md:block">{sesion}</div>
+        <div className="hidden items-center gap-2 lg:flex">
+          <InterruptorSonido />
+          {sesion}
+        </div>
 
         {/* Pantallas angostas */}
-        <details className="relative md:hidden">
+        <details className="relative lg:hidden">
           <summary className="boton boton-amarillo list-none !py-1.5 text-base">Menú</summary>
           <div className="tarjeta absolute right-0 mt-3 flex w-64 flex-col gap-1 p-3">
             <nav aria-label="Principal (móvil)" className="flex flex-col gap-1">
@@ -64,7 +79,10 @@ export default async function BarraNavegacion() {
                 </Link>
               ))}
             </nav>
-            <div className="mt-2 border-t-2 border-tinta pt-3">{sesion}</div>
+            <div className="mt-2 flex flex-col gap-2 border-t-2 border-tinta pt-3">
+              <InterruptorSonido />
+              {sesion}
+            </div>
           </div>
         </details>
       </div>

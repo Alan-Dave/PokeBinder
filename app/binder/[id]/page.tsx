@@ -1,9 +1,11 @@
 import Link from "next/link";
+import CarpetaBinder from "@/components/CarpetaBinder";
 import CasillaBinder from "@/components/CasillaBinder";
 import ControlesBinder from "@/components/ControlesBinder";
 import TableroBinder from "@/components/TableroBinder";
 import { listarOpcionesInventario, obtenerBinder, SIN_SESION } from "@/lib/binders";
 import { urlsImagenesOpcionales } from "@/lib/catalogo";
+import { listarCategorias } from "@/lib/categorias";
 import { PAGINAS_MAX, PAGINAS_MIN } from "@/lib/validators/binders";
 
 // Depende de la sesión del usuario y las URLs firmadas caducan: sin caché.
@@ -48,7 +50,7 @@ export default async function BinderDetallePage({
         <p role="alert" className="rounded-md bg-red-100 px-4 py-2 text-red-900">
           {resultado.error === SIN_SESION ? "Inicia sesión para ver tu binder." : resultado.error}
         </p>
-        <Link href={resultado.error === SIN_SESION ? "/login" : "/binder"} className="text-sm underline">
+        <Link href={resultado.error === SIN_SESION ? "/login" : "/binder"} className="text-sm font-bold text-azul underline">
           {resultado.error === SIN_SESION ? "Ir a iniciar sesión" : "Volver a mis binders"}
         </Link>
       </main>
@@ -59,20 +61,22 @@ export default async function BinderDetallePage({
   const total = binder.filas * binder.columnas;
 
   const opciones = await listarOpcionesInventario();
+  const listaCategorias = await listarCategorias();
+  const categorias = listaCategorias.ok ? listaCategorias.datos.map((c) => ({ id: c.id, nombre: c.nombre })) : [];
   const imagenes = await urlsImagenesOpcionales([...new Set(casillas.map((c) => c.cartaId))]);
   const porPosicion = new Map(casillas.map((c) => [c.posicion, c]));
 
   const enlace = (n: number) => `/binder/${binder.id}?pagina=${n}`;
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-8">
-      <Link href="/binder" className="text-sm underline">
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 p-8">
+      <Link href="/binder" className="text-sm font-bold text-azul underline">
         ← Mis binders
       </Link>
 
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">{binder.nombre}</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm text-tinta/75">
           Cuadrícula {binder.cuadricula.replace("x", " × ")} · {casillas.length} de {total} casillas ocupadas en esta
           página
         </p>
@@ -82,37 +86,40 @@ export default async function BinderDetallePage({
         binderId={binder.id}
         pagina={pagina}
         ocupadas={casillas.map((c) => c.posicion)}
-        opciones={opciones.ok ? opciones.datos : []}
+        categorias={categorias}
       >
-        <ul className={`grid gap-3 ${COLUMNAS[binder.columnas]}`}>
-          {Array.from({ length: total }, (_, posicion) => {
-            const c = porPosicion.get(posicion);
-            return (
-              <CasillaBinder
-                key={posicion}
-                binderId={binder.id}
-                pagina={pagina}
-                posicion={posicion}
-                carta={
-                  c
-                    ? {
-                        nombre: c.nombre,
-                        idApi: c.idApi,
-                        variante: c.variante,
-                        imagenUrl: imagenes[c.cartaId] ?? null,
-                      }
-                    : null
-                }
-                opciones={opciones.ok ? opciones.datos : []}
-              />
-            );
-          })}
-        </ul>
+        <CarpetaBinder id={binder.id} nombre={binder.nombre}>
+          <ul className={`grid gap-3 ${COLUMNAS[binder.columnas]}`}>
+            {Array.from({ length: total }, (_, posicion) => {
+              const c = porPosicion.get(posicion);
+              return (
+                <CasillaBinder
+                  key={posicion}
+                  binderId={binder.id}
+                  pagina={pagina}
+                  posicion={posicion}
+                  carta={
+                    c
+                      ? {
+                          id: c.cartaId,
+                          nombre: c.nombre,
+                          idApi: c.idApi,
+                          variante: c.variante,
+                          imagenUrl: imagenes[c.cartaId] ?? null,
+                        }
+                      : null
+                  }
+                  opciones={opciones.ok ? opciones.datos : []}
+                />
+              );
+            })}
+          </ul>
+        </CarpetaBinder>
       </TableroBinder>
 
       <nav aria-label="Páginas del binder" className="flex items-center justify-between text-sm">
         {pagina > 1 ? (
-          <Link href={enlace(pagina - 1)} className="underline">
+          <Link href={enlace(pagina - 1)} className="font-bold text-azul underline">
             ← Anterior
           </Link>
         ) : (
@@ -122,7 +129,7 @@ export default async function BinderDetallePage({
           Página {pagina} de {binder.paginas}
         </span>
         {pagina < binder.paginas ? (
-          <Link href={enlace(pagina + 1)} className="underline">
+          <Link href={enlace(pagina + 1)} className="font-bold text-azul underline">
             Siguiente →
           </Link>
         ) : (

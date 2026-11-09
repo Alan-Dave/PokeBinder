@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IconoCarpeta } from "@/components/CarpetaBinder";
 import FormularioBinder from "@/components/FormularioBinder";
 import { listarBinders, SIN_SESION } from "@/lib/binders";
 import { CUADRICULAS, PAGINAS_MAX, PAGINAS_MIN } from "@/lib/validators/binders";
@@ -19,7 +20,7 @@ export default async function BinderPage() {
           {resultado.error === SIN_SESION ? "Inicia sesión para ver tus binders." : resultado.error}
         </p>
         {resultado.error === SIN_SESION && (
-          <Link href="/login" className="text-sm underline">
+          <Link href="/login" className="text-sm font-bold text-azul underline">
             Ir a iniciar sesión
           </Link>
         )}
@@ -30,10 +31,10 @@ export default async function BinderPage() {
   const binders = resultado.datos;
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-8">
+    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-8">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Mis binders</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm text-tinta/75">
           Ordena las cartas de tu colección en páginas con la cuadrícula que prefieras.
         </p>
       </header>
@@ -41,20 +42,23 @@ export default async function BinderPage() {
       <FormularioBinder cuadriculas={CUADRICULAS} paginasMin={PAGINAS_MIN} paginasMax={PAGINAS_MAX} />
 
       {binders.length === 0 ? (
-        <p className="rounded-md border border-dashed border-zinc-300 p-6 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+        <p className="rounded-2xl border-[3px] border-dashed border-tinta bg-white p-6 text-tinta">
           Aún no tienes binders. Crea el primero arriba.
         </p>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {binders.map((b) => (
             <li key={b.id}>
               <Link
                 href={`/binder/${b.id}`}
-                className="flex items-center justify-between rounded-lg border border-zinc-200 p-4 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+                className="tarjeta flex items-center gap-4 p-4 hover:bg-amarillo focus-visible:bg-amarillo"
               >
-                <span className="font-medium">{b.nombre}</span>
-                <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                  {b.cuadricula.replace("x", " × ")} · {b.paginas === 1 ? "1 página" : `${b.paginas} páginas`}
+                <IconoCarpeta id={b.id} />
+                <span className="flex min-w-0 flex-col">
+                  <span className="truncate text-lg font-extrabold">{b.nombre}</span>
+                  <span className="text-sm font-bold">
+                    {b.cuadricula.replace("x", " × ")} · {b.paginas === 1 ? "1 página" : `${b.paginas} páginas`}
+                  </span>
                 </span>
               </Link>
             </li>

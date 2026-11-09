@@ -42,12 +42,49 @@ etapa y ningún Básico conocido, el mazo muestra una **advertencia** («no se p
 comprobar…»), nunca una aprobación. Inferir la categoría por el nombre o rellenar
 valores a mano mostraría como cierto algo que podría ser falso.
 
-## Qué se necesitaría para completarlo
+## Cómo se completa (PBI-X14, AB#81)
 
-1. Una fuente de la categoría (Pokémon, Entrenador, Energía) y la etapa de cada
-   carta. TCGdex, que ya se usa para la imagen en alta definición
-   (`lib/tcgdex.ts`), la entrega por carta.
-2. Un script de ingesta separado, al estilo de `ingesta/migrar_catalogo.py`, que
-   complete esas columnas para todas las ediciones. No se debe cargar a mano.
-3. Con eso, ampliar `lib/reglas-mazo.ts` con las reglas de categoría y retirar la
-   advertencia.
+1. `supabase/migrations/20261108140000_categoria_cartas.sql` agrega `cartas.categoria`
+   (`Pokemon`, `Trainer`, `Energy`) y `cartas.energia_basica`. La aplica Macarena a mano.
+2. `ingesta/completar_categorias.py` consulta TCGdex filtrando por categoría y etapa
+   (unas decenas de peticiones, no una por carta), cruza por `id_api` con las mismas
+   correcciones de id que `lib/precios-carta.ts` y escribe el resultado en todas las
+   ediciones. Con `--dry-run` solo reporta. Lo que TCGdex no trae queda sin dato y se
+   lista; no se infiere nada. `stage` solo se completa donde está vacío.
+3. `lib/reglas-mazo.ts` usa esos datos:
+   - Una energía básica es la que el catálogo marca como tal (TCGdex `energyType = Normal`);
+     sin ese dato se sigue reconociendo por el nombre.
+   - La advertencia del Pokémon Básico solo cuenta las cartas que podrían ser Pokémon:
+     una carta conocida como Entrenador o Energía ya no la dispara.
+
+**Orden obligatorio:** aplicar la migración, correr el script y después desplegar. Si la
+aplicación se despliega antes que la migración, la página del mazo falla porque pide
+columnas que no existen.
+
+## Reglas que NO se agregan
+
+Las reglas oficiales no limitan cuántas Energías ni cuántos Partidarios lleva un mazo
+(el límite de un Partidario por turno es de la partida, no del mazo). Validarlo sería
+inventar una regla. El límite de 4 copias ya cubre las energías especiales.
+
+## Resultado de la ingesta (9-11-2026)
+
+`ingesta/completar_categorias.py` se aplicó contra la base real, incluidos los sets traducidos de PBI-X16:
+
+| | Cartas (filas) |
+|---|---|
+| Pokémon | 78.974 |
+| Entrenador | 13.215 |
+| Energía | 1.937 (1.109 básicas y 828 especiales) |
+| Sin categoría | 1.798 antes de PBI-X16; 398 `id_api` distintos después |
+
+## Qué sigue sin cerrarse
+
+Quedan sin categoría los sets que TCGdex no tiene (`swsh*.5tg`, colecciones francesas de
+McDonald's, 2013), los kits de entrenador `tk1a`, `tk1b`, `tk2a`, `tk2b` (la letra a/b no se
+puede asignar con certeza) y cartas sueltas dentro de sets que sí cruzan. Lo mismo ocurre con
+los Pokémon cuya etapa TCGdex no entrega (VMAX, VSTAR, etc. no se completan a propósito).
+
+Para esas cartas el mazo conserva la advertencia, que ahora **nombra las cartas sin dato**
+(hasta tres, y cuántas más) y pide confirmar a mano que haya un Pokémon Básico, en lugar de
+repetir un conteo genérico.

@@ -2,7 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { calcularCobertura, type CoberturaCarta } from "@/lib/cobertura";
-import { validarMazo, type ResultadoReglas } from "@/lib/reglas-mazo";
+import { validarMazo, type CategoriaCarta, type ResultadoReglas } from "@/lib/reglas-mazo";
 import {
   agregarCartaAlMazoSchema,
   CANTIDAD_MAZO_MAX,
@@ -144,6 +144,8 @@ export type LineaMazo = {
   idioma: string;
   /** Etapa propia o, si falta, la de la edición en inglés. */
   stage: string | null;
+  /** Nombre de la edición en inglés, para cuando el propio no sirve para identificar la carta. */
+  nombreEn?: string | null;
 };
 
 export type MazoDetalle = {
@@ -190,7 +192,15 @@ export async function listarMazos(): Promise<Resultado<ResumenMazo[]>> {
 type FilaMazoCarta = {
   carta_id: number;
   cantidad: number;
-  cartas: { id_api: string; idioma: string; nombre: string; stage: string | null; subtipos: string[] } | null;
+  cartas: {
+    id_api: string;
+    idioma: string;
+    nombre: string;
+    stage: string | null;
+    subtipos: string[];
+    categoria: CategoriaCarta | null;
+    energia_basica: boolean | null;
+  } | null;
 };
 
 export async function obtenerMazo(entrada: unknown): Promise<Resultado<MazoDetalle>> {
@@ -212,7 +222,7 @@ export async function obtenerMazo(entrada: unknown): Promise<Resultado<MazoDetal
 
   const { data, error } = await supabase
     .from("mazo_cartas")
-    .select("carta_id, cantidad, cartas(id_api, idioma, nombre, stage, subtipos)")
+    .select("carta_id, cantidad, cartas(id_api, idioma, nombre, stage, subtipos, categoria, energia_basica)")
     .eq("mazo_id", mazoId);
 
   if (error) return { ok: false, error: traducirError(error.code, "obtener", error) };
@@ -223,18 +233,34 @@ export async function obtenerMazo(entrada: unknown): Promise<Resultado<MazoDetal
 
   // Solo las cartas en inglés traen etapa y subtipos, y el id_api es el mismo en
   // todos los idiomas: se completan los datos que falten con la edición en inglés.
-  const edicionEn = new Map<string, { nombre: string; stage: string | null; subtipos: string[] }>();
+  const edicionEn = new Map<
+    string,
+    { nombre: string; stage: string | null; subtipos: string[]; categoria: CategoriaCarta | null; energiaBasica: boolean | null }
+  >();
   if (filas.length > 0) {
     const idsApi = [...new Set(filas.map((f) => f.cartas.id_api))];
     const { data: ingles, error: errorIngles } = await supabase
       .from("cartas")
-      .select("id_api, nombre, stage, subtipos")
+      .select("id_api, nombre, stage, subtipos, categoria, energia_basica")
       .eq("idioma", "en")
       .in("id_api", idsApi);
 
     if (errorIngles) return { ok: false, error: traducirError(errorIngles.code, "obtener", errorIngles) };
-    for (const c of ingles as { id_api: string; nombre: string; stage: string | null; subtipos: string[] }[]) {
-      edicionEn.set(c.id_api, { nombre: c.nombre, stage: c.stage, subtipos: c.subtipos });
+    for (const c of ingles as {
+      id_api: string;
+      nombre: string;
+      stage: string | null;
+      subtipos: string[];
+      categoria: CategoriaCarta | null;
+      energia_basica: boolean | null;
+    }[]) {
+      edicionEn.set(c.id_api, {
+        nombre: c.nombre,
+        stage: c.stage,
+        subtipos: c.subtipos,
+        categoria: c.categoria,
+        energiaBasica: c.energia_basica,
+      });
     }
   }
 
@@ -249,6 +275,7 @@ export async function obtenerMazo(entrada: unknown): Promise<Resultado<MazoDetal
       idApi: f.cartas.id_api,
       idioma: f.cartas.idioma,
       stage,
+      nombreEn: en?.nombre ?? null,
     });
     return {
       cartaId: f.carta_id,
@@ -257,6 +284,11 @@ export async function obtenerMazo(entrada: unknown): Promise<Resultado<MazoDetal
       nombreEn: en?.nombre ?? null,
       stage,
       subtipos: f.cartas.subtipos.length > 0 ? f.cartas.subtipos : (en?.subtipos ?? []),
+      // id_api es el mismo en todos los idiomas y el script de ingesta escribe
+      // ambos datos en todas las ediciones, pero se completa con la edición en
+      // inglés por si alguna edición quedó atrás.
+      categoria: f.cartas.categoria ?? en?.categoria ?? null,
+      energiaBasica: f.cartas.energia_basica ?? en?.energiaBasica ?? null,
     };
   });
 

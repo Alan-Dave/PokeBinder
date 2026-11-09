@@ -148,8 +148,8 @@ describe("obtenerMazo", () => {
     if (!r.ok) return;
     expect(r.datos.mazo).toEqual({ id: 3, nombre: "Rayo" });
     expect(r.datos.lineas).toEqual([
-      { cartaId: 10, cantidad: 4, nombre: "Beartic", idApi: "swsh9-043", idioma: "es", stage: "Stage 1" },
-      { cartaId: 11, cantidad: 2, nombre: "Radiant Eevee", idApi: "swsh1-9", idioma: "en", stage: "Basic" },
+      { cartaId: 10, cantidad: 4, nombre: "Beartic", idApi: "swsh9-043", idioma: "es", stage: "Stage 1", nombreEn: "Beartic" },
+      { cartaId: 11, cantidad: 2, nombre: "Radiant Eevee", idApi: "swsh1-9", idioma: "en", stage: "Basic", nombreEn: null },
     ]);
     expect(r.datos.reglas.total).toBe(6);
     // Dos copias de una carta Radiant incumplen el límite de una.

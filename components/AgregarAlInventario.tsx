@@ -13,12 +13,15 @@ type Props = {
   // Los límites vienen de la página (servidor) para no cargar zod en el navegador.
   min: number;
   max: number;
+  // Categorías del usuario para guardar la carta al agregarla (PBI-X8).
+  categorias?: Array<{ id: number; nombre: string }>;
 };
 
-export default function AgregarAlInventario({ cartaId, variantes, min, max }: Props) {
+export default function AgregarAlInventario({ cartaId, variantes, min, max, categorias = [] }: Props) {
   const [estado, agregar, agregando] = useActionState(agregarCartaAccion, INICIAL);
   const idVariante = `variante-${cartaId}`;
   const idCantidad = `cantidad-${cartaId}`;
+  const idCategoria = `categoria-${cartaId}`;
 
   if (variantes.length === 0) {
     return <p className="text-sm font-bold">Sin variantes disponibles.</p>;
@@ -65,6 +68,26 @@ export default function AgregarAlInventario({ cartaId, variantes, min, max }: Pr
           {agregando ? "Agregando…" : "Agregar"}
         </button>
       </div>
+      {categorias.length > 0 && (
+        <div className="flex items-center gap-2">
+          <label htmlFor={idCategoria} className="text-sm font-bold">
+            Guardar en
+          </label>
+          <select
+            id={idCategoria}
+            name="categoriaId"
+            defaultValue=""
+            className="min-w-0 flex-1 rounded-xl border-[3px] border-tinta bg-white px-2 py-1.5 text-sm font-bold"
+          >
+            <option value="">Sin categoría</option>
+            {categorias.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       {estado.error && (
         <p role="alert" className="text-sm font-bold text-[#b42318]">
           {estado.error}

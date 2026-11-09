@@ -7,7 +7,7 @@ import type { EstadoAccion } from "@/app/coleccion/tipos";
 const INICIAL: EstadoAccion = { error: null, exito: false };
 
 const BOTON =
-  "rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800";
+  "boton boton-neutro !rounded-xl !px-3 !py-1 text-sm disabled:opacity-50";
 
 export default function CerrarReporte({ id }: { id: number }) {
   const [estado, cambiar, cambiando] = useActionState(cambiarEstadoReporteAccion, INICIAL);
@@ -22,7 +22,7 @@ export default function CerrarReporte({ id }: { id: number }) {
         Descartar
       </button>
       {estado.error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-sm font-bold text-[#b42318]">
           {estado.error}
         </p>
       )}

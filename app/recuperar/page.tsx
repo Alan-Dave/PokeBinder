@@ -14,17 +14,17 @@ export default async function RecuperarPage({ searchParams }: { searchParams: Pa
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 p-8">
       <h1 className="text-2xl font-semibold">Recuperar contraseña</h1>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-sm text-tinta/75">
         Escribe el correo de tu cuenta y te enviaremos un enlace para elegir una contraseña nueva.
       </p>
       {enlace === "invalido" && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-sm font-bold text-[#b42318]">
           El enlace venció o ya se usó. Pide uno nuevo.
         </p>
       )}
       <FormularioRecuperar />
       <p className="text-sm">
-        <Link href="/login" className="underline">
+        <Link href="/login" className="font-bold text-azul underline">
           Volver a iniciar sesión
         </Link>
       </p>

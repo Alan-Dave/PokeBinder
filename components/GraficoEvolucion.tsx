@@ -32,7 +32,7 @@ export default function GraficoEvolucion({ puntos }: { puntos: PuntoEvolucion[] 
           x={MARGEN.izquierda - 8}
           y={y(max) + 4}
           textAnchor="end"
-          className="fill-zinc-600 text-[11px] dark:fill-zinc-400"
+          className="fill-tinta/75 text-[11px]"
         >
           {formatearUsd(max)}
         </text>
@@ -40,18 +40,18 @@ export default function GraficoEvolucion({ puntos }: { puntos: PuntoEvolucion[] 
           x={MARGEN.izquierda - 8}
           y={y(min) + 4}
           textAnchor="end"
-          className="fill-zinc-600 text-[11px] dark:fill-zinc-400"
+          className="fill-tinta/75 text-[11px]"
         >
           {formatearUsd(min)}
         </text>
-        <text x={MARGEN.izquierda} y={ALTO - 6} className="fill-zinc-600 text-[11px] dark:fill-zinc-400">
+        <text x={MARGEN.izquierda} y={ALTO - 6} className="fill-tinta/75 text-[11px]">
           {puntos[0].fecha}
         </text>
         <text
           x={ANCHO - MARGEN.derecha}
           y={ALTO - 6}
           textAnchor="end"
-          className="fill-zinc-600 text-[11px] dark:fill-zinc-400"
+          className="fill-tinta/75 text-[11px]"
         >
           {puntos[puntos.length - 1].fecha}
         </text>

@@ -12,6 +12,7 @@ import {
   PAGINA_ALTO_MM,
   PAGINA_ANCHO_MM,
   posicionesPagina,
+  nombreParaProxy,
   textoSeguro,
 } from "./proxies";
 
@@ -142,5 +143,28 @@ describe("textoSeguro", () => {
 
   it("deja pasar el ASCII imprimible", () => {
     expect(textoSeguro("Mr. Mime V-UNION #1")).toBe("Mr. Mime V-UNION #1");
+  });
+});
+
+describe("nombreParaProxy", () => {
+  it("usa el nombre propio cuando tiene letras", () => {
+    expect(nombreParaProxy("Pikachu", "Pikachu EN")).toBe("Pikachu");
+    expect(nombreParaProxy("Pokémon Épico", null)).toBe("Pokémon Épico");
+  });
+
+  it("usa el de la edición en inglés cuando el propio no identifica la carta", () => {
+    expect(nombreParaProxy("<>", "Team Rocket's Zapdos")).toBe("Team Rocket's Zapdos");
+    expect(nombreParaProxy("ピカチュウ", "Pikachu")).toBe("Pikachu");
+    expect(nombreParaProxy("", "Pikachu")).toBe("Pikachu");
+  });
+
+  it("si tampoco hay nombre en inglés útil, deja el propio", () => {
+    expect(nombreParaProxy("<>", null)).toBe("<>");
+    expect(nombreParaProxy("<>", "ピカチュウ")).toBe("<>");
+  });
+
+  it("expandirCopias conserva el nombre en inglés de cada copia", () => {
+    const [primera] = expandirCopias([{ cartaId: 1, nombre: "<>", nombreEn: "Abra", cantidad: 2 }]);
+    expect(primera.nombreEn).toBe("Abra");
   });
 });

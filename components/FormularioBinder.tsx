@@ -6,7 +6,7 @@ import type { EstadoAccion } from "@/app/coleccion/tipos";
 
 const INICIAL: EstadoAccion = { error: null, exito: false };
 
-const CAMPO = "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
+const CAMPO = "rounded-xl border-[3px] border-tinta bg-white px-2 py-1.5 text-sm text-tinta";
 
 type Props = {
   cuadriculas: readonly string[];
@@ -19,7 +19,7 @@ export default function FormularioBinder({ cuadriculas, paginasMin, paginasMax }
   const [estado, crear, creando] = useActionState(crearBinderAccion, INICIAL);
 
   return (
-    <form action={crear} className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+    <form action={crear} className="flex flex-col gap-3 tarjeta p-4">
       <h2 className="font-medium">Nuevo binder</h2>
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-sm">
@@ -51,7 +51,7 @@ export default function FormularioBinder({ cuadriculas, paginasMin, paginasMax }
         <button
           type="submit"
           disabled={creando}
-          className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          className="boton boton-neutro !rounded-xl !px-3 !py-1 text-sm disabled:opacity-50"
         >
           {creando ? "Creando…" : "Crear binder"}
         </button>

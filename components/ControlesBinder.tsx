@@ -7,7 +7,7 @@ import type { EstadoAccion } from "@/app/coleccion/tipos";
 const INICIAL: EstadoAccion = { error: null, exito: false };
 
 const BOTON =
-  "rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800";
+  "boton boton-neutro !rounded-xl !px-3 !py-1 text-sm disabled:opacity-50";
 
 type Props = {
   binderId: number;
@@ -38,7 +38,7 @@ export default function ControlesBinder({ binderId, paginas, paginasMin, paginas
             min={paginasMin}
             max={paginasMax}
             required
-            className="w-20 rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
+            className="w-20 rounded-xl border-[3px] border-tinta bg-white px-2 py-1.5 text-sm text-tinta"
           />
           <button type="submit" disabled={cambiando} className={BOTON}>
             {cambiando ? "Guardando…" : "Guardar"}

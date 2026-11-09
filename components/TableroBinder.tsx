@@ -15,7 +15,10 @@ import {
 import { useState, useTransition, type ReactNode } from "react";
 import { colocarCartaAccion, moverCartaAccion, quitarCartaAccion } from "@/app/binder/acciones";
 import type { EstadoAccion } from "@/app/coleccion/tipos";
+import ImagenConRespaldo from "@/components/ImagenConRespaldo";
+import PanelColeccion from "@/components/PanelColeccion";
 import { type Accion, decidirSoltar, type Destino, type Origen } from "@/lib/arrastre";
+import type { CartaPanel } from "@/lib/panel-coleccion";
 import { etiquetaVariante } from "@/lib/variantes";
 
 /**
@@ -29,13 +32,6 @@ import { etiquetaVariante } from "@/lib/variantes";
  */
 
 const INICIAL: EstadoAccion = { error: null, exito: false };
-
-export type OpcionBandeja = {
-  id: number;
-  variante: string;
-  nombre: string;
-  idApi: string;
-};
 
 // Los datos que lleva cada elemento arrastrable: el tipo y lo necesario para decidir.
 type DatosArrastre = { origen: Origen; etiqueta: string };
@@ -61,33 +57,35 @@ export function useCartaArrastrable(posicion: number, etiqueta: string, habilita
   });
 }
 
-function ChipInventario({ opcion }: { opcion: OpcionBandeja }) {
-  const etiqueta = `${opcion.nombre} · ${etiquetaVariante(opcion.variante)}`;
+/** Carta del panel lateral: se arrastra a una casilla vacía del binder. */
+function TarjetaPanel({ carta }: { carta: CartaPanel }) {
+  const etiqueta = `${carta.nombre} · ${etiquetaVariante(carta.variante)}`;
   const datos: DatosArrastre = {
-    origen: { tipo: "inventario", inventarioId: opcion.id },
+    origen: { tipo: "inventario", inventarioId: carta.inventarioId },
     etiqueta,
   };
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `inventario-${opcion.id}`,
+    id: `inventario-${carta.inventarioId}`,
     data: datos,
   });
 
   return (
-    <li>
-      <button
-        type="button"
-        ref={setNodeRef}
-        {...attributes}
-        {...listeners}
-        aria-label={`Arrastrar ${etiqueta} a una casilla`}
-        className={`w-full cursor-grab touch-none rounded-md border border-zinc-200 px-2 py-1 text-left text-xs hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900 ${isDragging ? "opacity-40" : ""}`}
-      >
-        <span className="block truncate font-medium">{opcion.nombre}</span>
-        <span className="block truncate text-zinc-600 dark:text-zinc-400">
-          {opcion.idApi} · {etiquetaVariante(opcion.variante)}
-        </span>
-      </button>
-    </li>
+    <button
+      type="button"
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      aria-label={`Arrastrar ${etiqueta} a una casilla`}
+      className={`flex w-full cursor-grab touch-none flex-col gap-1 rounded-xl border-2 border-tinta bg-white p-1.5 text-left hover:bg-amarillo focus-visible:bg-amarillo ${isDragging ? "opacity-40" : ""}`}
+    >
+      <span className="flex aspect-[5/7] w-full items-center justify-center overflow-hidden rounded-lg bg-[#e9e9ee]">
+        <ImagenConRespaldo src={carta.imagenUrl} alt="" draggable={false} />
+      </span>
+      <span className="block truncate text-xs font-extrabold">{carta.nombre}</span>
+      <span className="block truncate text-xs">
+        {etiquetaVariante(carta.variante)} · ×{carta.cantidad}
+      </span>
+    </button>
   );
 }
 
@@ -101,8 +99,8 @@ function ZonaQuitar({ activa }: { activa: boolean }) {
       ref={setNodeRef}
       className={`rounded-lg border-2 border-dashed p-3 text-center text-sm ${
         isOver
-          ? "border-red-500 bg-red-50 text-red-900 dark:bg-red-950 dark:text-red-100"
-          : "border-zinc-300 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400"
+          ? "border-rojo bg-[#fee4e2] text-tinta"
+          : "border-tinta text-tinta/75"
       } ${activa ? "" : "opacity-60"}`}
     >
       Suelta aquí una carta del binder para quitarla
@@ -115,11 +113,12 @@ type Props = {
   pagina: number;
   /** Casillas ocupadas de la página actual. */
   ocupadas: number[];
-  opciones: OpcionBandeja[];
+  /** Categorías del usuario para filtrar el panel lateral. */
+  categorias: Array<{ id: number; nombre: string }>;
   children: ReactNode;
 };
 
-export default function TableroBinder({ binderId, pagina, ocupadas, opciones, children }: Props) {
+export default function TableroBinder({ binderId, pagina, ocupadas, categorias, children }: Props) {
   const [pendiente, iniciar] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [arrastrando, setArrastrando] = useState<string | null>(null);
@@ -183,37 +182,33 @@ export default function TableroBinder({ binderId, pagina, ocupadas, opciones, ch
       <p role="status" aria-live="polite" className="sr-only">
         {pendiente ? "Guardando el cambio…" : ""}
       </p>
-      {error && (
-        <p role="alert" className="rounded-md bg-red-100 px-4 py-2 text-sm text-red-900">
-          {error}
-        </p>
-      )}
 
-      {children}
+      {/* En pantallas anchas el panel va a la izquierda; en angostas, debajo del tablero. */}
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+        <aside
+          aria-label="Cartas de tu colección"
+          className="order-2 flex flex-col gap-2 lg:order-1 lg:sticky lg:top-24 lg:w-80 lg:shrink-0"
+        >
+          <PanelColeccion categorias={categorias} renderCarta={(carta) => <TarjetaPanel carta={carta} />} />
+          <p className="text-sm">Arrastra una carta a una casilla vacía, o usa el selector de cada casilla.</p>
+        </aside>
 
-      <ZonaQuitar activa={arrastrando !== null} />
+        <div className="order-1 flex min-w-0 flex-1 flex-col gap-6 lg:order-2">
+          {error && (
+            <p role="alert" className="rounded-md bg-red-100 px-4 py-2 text-sm text-red-900">
+              {error}
+            </p>
+          )}
 
-      <section aria-labelledby="titulo-bandeja" className="flex flex-col gap-2">
-        <h2 id="titulo-bandeja" className="font-medium">
-          Tu inventario
-        </h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Arrastra una carta a una casilla vacía, o usa el selector de cada casilla.
-        </p>
-        {opciones.length === 0 ? (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Tu inventario está vacío.</p>
-        ) : (
-          <ul className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
-            {opciones.map((o) => (
-              <ChipInventario key={o.id} opcion={o} />
-            ))}
-          </ul>
-        )}
-      </section>
+          {children}
+
+          <ZonaQuitar activa={arrastrando !== null} />
+        </div>
+      </div>
 
       <DragOverlay>
         {arrastrando && (
-          <div className="rounded-md border border-zinc-400 bg-white px-3 py-2 text-sm shadow-lg dark:bg-zinc-900">
+          <div className="rounded-xl border-[3px] border-tinta bg-white px-3 py-2 text-sm font-bold shadow-lg">
             {arrastrando}
           </div>
         )}

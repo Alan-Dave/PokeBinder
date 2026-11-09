@@ -10,7 +10,14 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { agregarCartaAccion } from "@/app/catalogo/acciones";
-import { eliminarAccion, guardarCantidadAccion } from "./acciones";
+import {
+  alternarCategoriaAccion,
+  crearCategoriaAccion,
+  eliminarAccion,
+  eliminarCategoriaAccion,
+  guardarCantidadAccion,
+  renombrarCategoriaAccion,
+} from "./acciones";
 
 const INICIAL = { error: null, exito: false };
 
@@ -85,6 +92,55 @@ describe("eliminarAccion", () => {
   });
 });
 
+describe("acciones de categorías", () => {
+  it("crear una categoría válida refresca /coleccion", async () => {
+    sesion();
+
+    expect(await crearCategoriaAccion(INICIAL, formulario({ nombre: "Mis Sylveon" }))).toEqual({
+      error: null,
+      exito: true,
+    });
+    expect(revalidatePath).toHaveBeenCalledWith("/coleccion");
+  });
+
+  it.each([
+    ["crear sin nombre", () => crearCategoriaAccion(INICIAL, formulario({}))],
+    ["crear con nombre en blanco", () => crearCategoriaAccion(INICIAL, formulario({ nombre: "   " }))],
+    ["crear con nombre larguísimo", () => crearCategoriaAccion(INICIAL, formulario({ nombre: "x".repeat(61) }))],
+    ["renombrar con id manipulado", () => renombrarCategoriaAccion(INICIAL, formulario({ id: "1 OR 1=1", nombre: "x" }))],
+    ["eliminar con id no numérico", () => eliminarCategoriaAccion(INICIAL, formulario({ id: "../x" }))],
+    ["marcar con carta inválida", () => alternarCategoriaAccion(INICIAL, formulario({ categoriaId: "1", inventarioId: "-4", marcar: "1" }))],
+    ["desmarcar con categoría inválida", () => alternarCategoriaAccion(INICIAL, formulario({ categoriaId: "x", inventarioId: "4" }))],
+  ])("rechaza %s sin tocar la base", async (_, llamar) => {
+    const cliente = sesion();
+
+    const estado = await llamar();
+
+    expect(estado.exito).toBe(false);
+    expect(estado.error).toBeTruthy();
+    expect(cliente.from).not.toHaveBeenCalled();
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("renombrar y eliminar válidos refrescan /coleccion", async () => {
+    sesion();
+
+    expect(await renombrarCategoriaAccion(INICIAL, formulario({ id: "2", nombre: "Nuevo" }))).toEqual({ error: null, exito: true });
+    expect(await eliminarCategoriaAccion(INICIAL, formulario({ id: "2" }))).toEqual({ error: null, exito: true });
+    expect(revalidatePath).toHaveBeenCalledTimes(2);
+  });
+
+  it("con «marcar» asigna y sin él quita", async () => {
+    const cliente = sesion();
+
+    await alternarCategoriaAccion(INICIAL, formulario({ categoriaId: "2", inventarioId: "5", marcar: "1" }));
+    await alternarCategoriaAccion(INICIAL, formulario({ categoriaId: "2", inventarioId: "5" }));
+
+    expect(cliente.from).toHaveBeenCalledTimes(2);
+    expect(revalidatePath).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("agregarCartaAccion", () => {
   it("agrega una carta válida", async () => {
     sesion();
@@ -118,5 +174,80 @@ describe("agregarCartaAccion", () => {
 
     expect(estado.exito).toBe(false);
     expect(cliente.from).not.toHaveBeenCalled();
+  });
+});
+
+describe("agregarCartaAccion con categoría (PBI-X8)", () => {
+  const CAMPOS = { cartaId: "10", variante: "normal", cantidad: "1" };
+
+  /** Cliente donde cada tabla responde distinto: sirve para hacer fallar solo la asignación. */
+  function sesionPorTabla(respuestas: Record<string, { data?: unknown; error?: { code: string } | null }>) {
+    const tablas: string[] = [];
+    const cliente = {
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "u1" } } }) },
+      from: vi.fn((tabla: string) => {
+        tablas.push(tabla);
+        const r = { data: null, error: null, ...respuestas[tabla] };
+        const consulta: Record<string, unknown> = {};
+        for (const m of ["insert", "select"]) consulta[m] = () => consulta;
+        consulta.single = () => Promise.resolve(r);
+        consulta.then = (resolver: (v: unknown) => unknown) => Promise.resolve(r).then(resolver);
+        return consulta;
+      }),
+    };
+    vi.mocked(createClient).mockResolvedValue(cliente as never);
+    return { cliente, tablas };
+  }
+
+  it("agrega la carta y la asigna a la categoría elegida", async () => {
+    const { tablas } = sesionPorTabla({ inventario: { data: { id: 55 } } });
+
+    const estado = await agregarCartaAccion(INICIAL, formulario({ ...CAMPOS, categoriaId: "3" }));
+
+    expect(estado).toEqual({ error: null, exito: true });
+    expect(tablas).toEqual(["inventario", "categoria_cartas"]);
+  });
+
+  it.each([undefined, ""])("sin categoría (%j) no toca la tabla de categorías", async (categoriaId) => {
+    const { tablas } = sesionPorTabla({ inventario: { data: { id: 55 } } });
+    const campos = categoriaId === undefined ? CAMPOS : { ...CAMPOS, categoriaId };
+
+    expect(await agregarCartaAccion(INICIAL, formulario(campos))).toEqual({ error: null, exito: true });
+    expect(tablas).toEqual(["inventario"]);
+  });
+
+  it.each([
+    ["texto", "abc"],
+    ["cero", "0"],
+    ["negativa", "-2"],
+    ["decimal", "1.5"],
+    ["inyección", "1 OR 1=1"],
+  ])("rechaza una categoría %s ANTES de agregar la carta", async (_, categoriaId) => {
+    const { cliente } = sesionPorTabla({});
+
+    const estado = await agregarCartaAccion(INICIAL, formulario({ ...CAMPOS, categoriaId }));
+
+    expect(estado.exito).toBe(false);
+    expect(estado.error).toBeTruthy();
+    expect(cliente.from).not.toHaveBeenCalled();
+  });
+
+  it("si la categoría es ajena (RLS la rechaza), la carta queda agregada y se avisa", async () => {
+    sesionPorTabla({ inventario: { data: { id: 55 } }, categoria_cartas: { error: { code: "42501" } } });
+
+    const estado = await agregarCartaAccion(INICIAL, formulario({ ...CAMPOS, categoriaId: "999" }));
+
+    expect(estado.exito).toBe(true);
+    expect(estado.error).toContain("Se agregó a tu colección, pero no a la categoría");
+    expect(estado.error).toContain("No tienes permiso");
+  });
+
+  it("si agregar la carta falla, no intenta asignar la categoría", async () => {
+    const { tablas } = sesionPorTabla({ inventario: { error: { code: "23505" } } });
+
+    const estado = await agregarCartaAccion(INICIAL, formulario({ ...CAMPOS, categoriaId: "3" }));
+
+    expect(estado.exito).toBe(false);
+    expect(tablas).toEqual(["inventario"]);
   });
 });

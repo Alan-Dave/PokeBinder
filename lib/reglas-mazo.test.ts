@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COPIAS_MAX, TAMANO_MAZO, validarMazo, type EntradaMazo } from "./reglas-mazo";
+import { COPIAS_MAX, separarProgreso, TAMANO_MAZO, validarMazo, type EntradaMazo } from "./reglas-mazo";
 
 let siguiente = 1;
 function carta(parcial: Partial<EntradaMazo> = {}): EntradaMazo {
@@ -146,13 +146,17 @@ describe("Pokémon Básico", () => {
   });
 
   it("avisa, sin aprobar ni rechazar, cuando hay cartas sin categoría", () => {
-    const r = validarMazo([carta({ stage: null }), carta({ stage: null }), carta({ stage: "Item" })]);
+    const r = validarMazo([
+      carta({ nombre: "Carta A", nombreEn: "Card A", stage: null }),
+      carta({ nombre: "Carta B", nombreEn: "Card B", stage: null }),
+      carta({ stage: "Item" }),
+    ]);
     expect(reglas(r)).not.toContain("basico");
     expect(r.advertencias).toEqual([
       {
         regla: "basico",
         mensaje:
-          "No se pudo comprobar que el mazo tenga un Pokémon Básico: el catálogo no trae la categoría de 2 de las 3 cartas distintas del mazo.",
+          "No se pudo comprobar que el mazo tenga un Pokémon Básico porque el catálogo no tiene la categoría o la etapa de Carta A y Carta B. Confirma tú que alguna lo sea.",
       },
     ]);
   });
@@ -175,5 +179,112 @@ describe("Pokémon Básico", () => {
     const r = validarMazo([carta({ stage: "Basic" }), carta({ stage: null })]);
     expect(r.advertencias).toEqual([]);
     expect(reglas(r)).not.toContain("basico");
+  });
+});
+
+describe("con la categoría completada (PBI-X14)", () => {
+  it("una energía básica marcada por el catálogo no tiene límite aunque su nombre no esté en la lista", () => {
+    const r = validarMazo([
+      carta({ nombreEn: "Basic Lightning Energy", categoria: "Energy", energiaBasica: true, stage: null, cantidad: 20 }),
+    ]);
+    expect(reglas(r)).not.toContain("copias");
+  });
+
+  it("una energía especial sí está limitada, aunque se llame como una básica", () => {
+    const r = validarMazo([
+      carta({ nombreEn: "Fire Energy", categoria: "Energy", energiaBasica: false, stage: null, cantidad: 5 }),
+    ]);
+    expect(reglas(r)).toContain("copias");
+  });
+
+  it("energiaBasica sin categoría Energy no da exención", () => {
+    const r = validarMazo([
+      carta({ nombreEn: "Rare Candy", categoria: "Trainer", energiaBasica: true, stage: null, cantidad: 5 }),
+    ]);
+    expect(reglas(r)).toContain("copias");
+  });
+
+  it("sin dato de energiaBasica se sigue reconociendo por el nombre", () => {
+    const r = validarMazo([carta({ nombreEn: "Water Energy", categoria: null, stage: null, cantidad: 12 })]);
+    expect(reglas(r)).not.toContain("copias");
+  });
+
+  it("Entrenadores y Energías sin etapa ya no impiden afirmar que falta un Pokémon Básico", () => {
+    const r = validarMazo([
+      carta({ categoria: "Trainer", stage: null }),
+      carta({ categoria: "Energy", energiaBasica: true, nombreEn: "Fire Energy", stage: null }),
+    ]);
+    expect(r.advertencias).toEqual([]);
+    expect(r.errores).toContainEqual({ regla: "basico", mensaje: "El mazo necesita al menos un Pokémon Básico." });
+  });
+
+  it("un Pokémon sin etapa conocida mantiene la advertencia: podría ser Básico", () => {
+    const r = validarMazo([carta({ categoria: "Pokemon", stage: null }), carta({ categoria: "Trainer", stage: null })]);
+    expect(r.advertencias.map((a) => a.regla)).toEqual(["basico"]);
+    expect(reglas(r)).not.toContain("basico");
+  });
+
+  it("cuenta como incierta solo la carta sin dato, no las que ya se sabe que no son Pokémon", () => {
+    const r = validarMazo([
+      carta({ categoria: "Trainer", stage: null }),
+      carta({ nombre: "Sin categoría", categoria: null, stage: null }),
+    ]);
+    expect(r.advertencias[0].mensaje).toContain("de Sin categoría. Confirma");
+  });
+
+  it("nombra hasta tres cartas sin dato y cuenta el resto", () => {
+    const sinDato = (n: string) => carta({ nombre: n, nombreEn: n, categoria: null, stage: null });
+    const mensaje = (nombres: string[]) => validarMazo(nombres.map(sinDato)).advertencias[0].mensaje;
+
+    expect(mensaje(["Uno"])).toContain("etapa de Uno.");
+    expect(mensaje(["Uno", "Dos"])).toContain("etapa de Uno y Dos.");
+    expect(mensaje(["Uno", "Dos", "Tres"])).toContain("etapa de Uno, Dos y Tres.");
+    expect(mensaje(["Uno", "Dos", "Tres", "Cuatro", "Cinco"])).toContain("etapa de Uno, Dos, Tres y 2 más.");
+  });
+
+  it("no repite el nombre de una carta que está en dos ediciones", () => {
+    const edicion = () => carta({ nombre: "Pikachu", nombreEn: "Pikachu", categoria: null, stage: null });
+    const r = validarMazo([edicion(), edicion()]);
+    expect(r.advertencias[0].mensaje).toContain("etapa de Pikachu.");
+  });
+});
+
+describe("separarProgreso (PBI-X24)", () => {
+  it("un mazo a medio armar muestra lo que falta como progreso, no como error", () => {
+    const r = validarMazo([carta({ stage: "Basic", cantidad: 3 })]);
+    const p = separarProgreso(r);
+
+    expect(p.faltan).toBe(TAMANO_MAZO - 3);
+    expect(p.errores).toEqual([]);
+    expect(r.cumple).toBe(false);
+  });
+
+  it("un mazo vacío tampoco es un error: faltan las 60", () => {
+    const p = separarProgreso(validarMazo([]));
+
+    expect(p.faltan).toBe(TAMANO_MAZO);
+    expect(p.errores).toEqual([]);
+  });
+
+  it("los errores de verdad se conservan aunque el mazo esté incompleto", () => {
+    const r = validarMazo([carta({ nombre: "Pikachu", nombreEn: "Pikachu", stage: "Basic", cantidad: 5 })]);
+    const p = separarProgreso(r);
+
+    expect(p.faltan).toBe(TAMANO_MAZO - 5);
+    expect(p.errores.map((e) => e.regla)).toEqual(["copias"]);
+  });
+
+  it("pasarse de 60 sí es un error y no deja nada por completar", () => {
+    const p = separarProgreso(validarMazo(Array.from({ length: 16 }, () => carta({ cantidad: 4 }))));
+
+    expect(p.faltan).toBe(0);
+    expect(p.errores.map((e) => e.regla)).toContain("tamano");
+  });
+
+  it("con exactamente 60 cartas no falta nada", () => {
+    const p = separarProgreso(validarMazo(mazoCompleto()));
+
+    expect(p.faltan).toBe(0);
+    expect(p.errores).toEqual([]);
   });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ImagenNoDisponible } from "@/components/ImagenConRespaldo";
 
 type Props = {
   // Imagen firmada del bucket; null si la carta no tiene.
@@ -14,33 +15,14 @@ type Props = {
  * Imagen de una carta en el catálogo.
  *
  * Orden: la del bucket, después la miniatura de TCGdex y, si ninguna carga,
- * el texto "Sin imagen". El respaldo existe porque solo ~22 % del catálogo
+ * la ilustración de «Imagen no disponible». El respaldo existe porque solo ~22 % del catálogo
  * tiene imagen en el bucket.
  */
 export default function ImagenCarta({ url, urlRespaldo, alt }: Props) {
   const [fuentes, setFuentes] = useState<string[]>(url ? [url, urlRespaldo] : [urlRespaldo]);
 
   if (fuentes.length === 0) {
-    return (
-      <span className="flex flex-col items-center gap-2 text-center text-sm font-bold">
-        <svg
-          width="48"
-          height="48"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <rect x="3" y="4" width="18" height="16" rx="3" />
-          <circle cx="9" cy="10" r="2" />
-          <path d="M21 16l-5-5-8 8" />
-        </svg>
-        Sin imagen
-      </span>
-    );
+    return <ImagenNoDisponible alt={`${alt} (imagen no disponible)`} />;
   }
 
   return (
