@@ -24,9 +24,9 @@ export default async function RegistroPage() {
         nombreMin={NOMBRE_MIN}
         nombreMax={NOMBRE_MAX}
       />
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-sm text-tinta/75">
         ¿Ya tienes cuenta?{" "}
-        <Link href="/login" className="underline">
+        <Link href="/login" className="font-bold text-azul underline">
           Iniciar sesión
         </Link>
       </p>

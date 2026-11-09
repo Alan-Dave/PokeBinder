@@ -7,7 +7,7 @@ import type { EstadoFormulario } from "@/lib/estado-formulario";
 const INICIAL: EstadoFormulario = { error: null };
 
 const CAMPO =
-  "rounded-md border border-zinc-300 bg-transparent px-3 py-2 dark:border-zinc-700";
+  "rounded-xl border-[3px] border-tinta bg-white px-3 py-2 text-base text-tinta";
 
 export default function FormularioLogin() {
   const [estado, iniciarSesion, enviando] = useActionState(iniciarSesionAccion, INICIAL);
@@ -15,7 +15,7 @@ export default function FormularioLogin() {
   return (
     <form action={iniciarSesion} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <label htmlFor="correo" className="text-sm font-medium">
+        <label htmlFor="correo" className="text-sm font-extrabold">
           Correo
         </label>
         <input
@@ -29,7 +29,7 @@ export default function FormularioLogin() {
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label htmlFor="contrasena" className="text-sm font-medium">
+        <label htmlFor="contrasena" className="text-sm font-extrabold">
           Contraseña
         </label>
         <input
@@ -44,7 +44,7 @@ export default function FormularioLogin() {
       </div>
 
       {estado.error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-sm font-bold text-[#b42318]">
           {estado.error}
         </p>
       )}
@@ -52,7 +52,7 @@ export default function FormularioLogin() {
       <button
         type="submit"
         disabled={enviando}
-        className="rounded-md bg-zinc-900 px-4 py-2 font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+        className="boton boton-rojo disabled:opacity-50"
       >
         {enviando ? "Entrando…" : "Iniciar sesión"}
       </button>

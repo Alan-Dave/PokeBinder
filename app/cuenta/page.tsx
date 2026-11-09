@@ -15,7 +15,7 @@ export default async function CuentaPage() {
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 p-8">
       <h1 className="text-2xl font-semibold">Mi cuenta</h1>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">{perfil.correo}</p>
+      <p className="text-sm text-tinta/75">{perfil.correo}</p>
       <section className="flex flex-col gap-4">
         <h2 className="text-lg font-semibold">Cambiar contraseña</h2>
         <FormularioContrasenaNueva accion={cambiarContrasenaAccion} pideActual textoBoton="Cambiar contraseña" />

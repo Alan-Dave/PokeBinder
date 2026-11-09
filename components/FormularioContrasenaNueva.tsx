@@ -6,7 +6,7 @@ import { CONTRASENA_MAX, CONTRASENA_MIN } from "@/lib/validators/auth";
 
 const INICIAL: EstadoFormulario = { error: null };
 
-const CAMPO = "rounded-md border border-zinc-300 bg-transparent px-3 py-2 dark:border-zinc-700";
+const CAMPO = "rounded-xl border-[3px] border-tinta bg-white px-3 py-2 text-base text-tinta";
 
 type Props = {
   accion: (previo: EstadoFormulario, formData: FormData) => Promise<EstadoFormulario>;
@@ -23,7 +23,7 @@ export default function FormularioContrasenaNueva({ accion, pideActual = false, 
     <form action={enviar} className="flex flex-col gap-4">
       {pideActual && (
         <div className="flex flex-col gap-1">
-          <label htmlFor="contrasenaActual" className="text-sm font-medium">
+          <label htmlFor="contrasenaActual" className="text-sm font-extrabold">
             Contraseña actual
           </label>
           <input
@@ -38,7 +38,7 @@ export default function FormularioContrasenaNueva({ accion, pideActual = false, 
         </div>
       )}
       <div className="flex flex-col gap-1">
-        <label htmlFor="contrasena" className="text-sm font-medium">
+        <label htmlFor="contrasena" className="text-sm font-extrabold">
           Contraseña nueva
         </label>
         <input
@@ -52,12 +52,12 @@ export default function FormularioContrasenaNueva({ accion, pideActual = false, 
           aria-describedby="ayuda-contrasena"
           className={CAMPO}
         />
-        <p id="ayuda-contrasena" className="text-xs text-zinc-600 dark:text-zinc-400">
+        <p id="ayuda-contrasena" className="text-xs text-tinta/75">
           Al menos {CONTRASENA_MIN} caracteres. Una frase larga es mejor que una clave con símbolos.
         </p>
       </div>
       <div className="flex flex-col gap-1">
-        <label htmlFor="confirmacion" className="text-sm font-medium">
+        <label htmlFor="confirmacion" className="text-sm font-extrabold">
           Repite la contraseña nueva
         </label>
         <input
@@ -72,12 +72,12 @@ export default function FormularioContrasenaNueva({ accion, pideActual = false, 
       </div>
 
       {estado.error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-sm font-bold text-[#b42318]">
           {estado.error}
         </p>
       )}
       {estado.aviso && (
-        <p role="status" className="text-sm text-green-800 dark:text-green-400">
+        <p role="status" className="text-sm font-bold text-verde">
           {estado.aviso}
         </p>
       )}
@@ -85,7 +85,7 @@ export default function FormularioContrasenaNueva({ accion, pideActual = false, 
       <button
         type="submit"
         disabled={enviando}
-        className="rounded-md bg-zinc-900 px-4 py-2 font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+        className="boton boton-rojo disabled:opacity-50"
       >
         {enviando ? "Guardando…" : textoBoton}
       </button>
