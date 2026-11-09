@@ -177,3 +177,54 @@ describe("Pokémon Básico", () => {
     expect(reglas(r)).not.toContain("basico");
   });
 });
+
+describe("con la categoría completada (PBI-X14)", () => {
+  it("una energía básica marcada por el catálogo no tiene límite aunque su nombre no esté en la lista", () => {
+    const r = validarMazo([
+      carta({ nombreEn: "Basic Lightning Energy", categoria: "Energy", energiaBasica: true, stage: null, cantidad: 20 }),
+    ]);
+    expect(reglas(r)).not.toContain("copias");
+  });
+
+  it("una energía especial sí está limitada, aunque se llame como una básica", () => {
+    const r = validarMazo([
+      carta({ nombreEn: "Fire Energy", categoria: "Energy", energiaBasica: false, stage: null, cantidad: 5 }),
+    ]);
+    expect(reglas(r)).toContain("copias");
+  });
+
+  it("energiaBasica sin categoría Energy no da exención", () => {
+    const r = validarMazo([
+      carta({ nombreEn: "Rare Candy", categoria: "Trainer", energiaBasica: true, stage: null, cantidad: 5 }),
+    ]);
+    expect(reglas(r)).toContain("copias");
+  });
+
+  it("sin dato de energiaBasica se sigue reconociendo por el nombre", () => {
+    const r = validarMazo([carta({ nombreEn: "Water Energy", categoria: null, stage: null, cantidad: 12 })]);
+    expect(reglas(r)).not.toContain("copias");
+  });
+
+  it("Entrenadores y Energías sin etapa ya no impiden afirmar que falta un Pokémon Básico", () => {
+    const r = validarMazo([
+      carta({ categoria: "Trainer", stage: null }),
+      carta({ categoria: "Energy", energiaBasica: true, nombreEn: "Fire Energy", stage: null }),
+    ]);
+    expect(r.advertencias).toEqual([]);
+    expect(r.errores).toContainEqual({ regla: "basico", mensaje: "El mazo necesita al menos un Pokémon Básico." });
+  });
+
+  it("un Pokémon sin etapa conocida mantiene la advertencia: podría ser Básico", () => {
+    const r = validarMazo([carta({ categoria: "Pokemon", stage: null }), carta({ categoria: "Trainer", stage: null })]);
+    expect(r.advertencias.map((a) => a.regla)).toEqual(["basico"]);
+    expect(reglas(r)).not.toContain("basico");
+  });
+
+  it("cuenta como incierta solo la carta sin dato, no las que ya se sabe que no son Pokémon", () => {
+    const r = validarMazo([
+      carta({ categoria: "Trainer", stage: null }),
+      carta({ categoria: null, stage: null }),
+    ]);
+    expect(r.advertencias[0].mensaje).toContain("de 1 de las 2 cartas distintas");
+  });
+});
