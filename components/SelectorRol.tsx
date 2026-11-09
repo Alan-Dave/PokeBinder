@@ -9,7 +9,7 @@ import { ROLES, type Rol } from "@/lib/validators/roles";
 const INICIAL: EstadoAccion = { error: null, exito: false };
 
 const BOTON =
-  "rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800";
+  "boton boton-neutro !rounded-xl !px-3 !py-1 text-sm disabled:opacity-50";
 
 type Props = { usuarioId: string; nombre: string; rolActual: Rol };
 
@@ -34,7 +34,7 @@ export default function SelectorRol({ usuarioId, nombre, rolActual }: Props) {
             setElegido(e.target.value as Rol);
             setConfirmando(false);
           }}
-          className="rounded-md border border-zinc-400 bg-transparent px-2 py-1 text-sm"
+          className="rounded-xl border-[3px] border-tinta bg-white px-2 py-1 text-sm text-tinta"
         >
           {ROLES.map((rol) => (
             <option key={rol} value={rol}>
@@ -60,11 +60,11 @@ export default function SelectorRol({ usuarioId, nombre, rolActual }: Props) {
           ))}
       </form>
       {estado.error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-sm font-bold text-[#b42318]">
           {estado.error}
         </p>
       )}
-      {estado.exito && <p className="text-sm text-green-800 dark:text-green-400">Rol actualizado.</p>}
+      {estado.exito && <p className="text-sm font-bold text-verde">Rol actualizado.</p>}
     </div>
   );
 }

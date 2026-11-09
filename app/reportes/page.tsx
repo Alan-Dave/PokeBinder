@@ -8,9 +8,9 @@ export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Reportes · PokeBinder" };
 
-const CAMPO = "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
+const CAMPO = "rounded-xl border-[3px] border-tinta bg-white px-2 py-1.5 text-sm text-tinta";
 const BOTON =
-  "rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800";
+  "boton boton-neutro !rounded-xl !px-3 !py-1 text-sm";
 
 // Los dos reportes comparten la URL: cada uno conserva los parámetros del otro.
 // Los del resumen llevan prefijo «filtro» para no chocar con los de faltantes.
@@ -41,7 +41,7 @@ export default async function ReportesPage({
         <p role="alert" className="rounded-md bg-red-100 px-4 py-2 text-red-900">
           Inicia sesión para ver tus reportes.
         </p>
-        <Link href="/login" className="text-sm underline">
+        <Link href="/login" className="text-sm font-bold text-azul underline">
           Ir a iniciar sesión
         </Link>
       </main>
@@ -75,7 +75,7 @@ export default async function ReportesPage({
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 p-8">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Reportes</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm text-tinta/75">
           Resumen de tu inventario y cartas que te faltan por set. Los filtros quedan en la dirección: puedes guardarla.
         </p>
       </header>
@@ -123,64 +123,64 @@ export default async function ReportesPage({
             {resumen.error}
           </p>
         ) : resumen.datos.copias === 0 ? (
-          <p className="rounded-md border border-dashed border-zinc-300 p-6 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+          <p className="rounded-2xl border-[3px] border-dashed border-tinta bg-white p-6 text-tinta">
             {hayFiltros ? "Ninguna carta de tu inventario coincide con los filtros." : "Tu inventario está vacío: aún no hay nada que reportar."}
           </p>
         ) : (
           <>
             <dl className="grid grid-cols-3 gap-3 text-sm">
-              <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-                <dt className="text-zinc-600 dark:text-zinc-400">Copias</dt>
+              <div className="tarjeta p-3">
+                <dt className="text-tinta/75">Copias</dt>
                 <dd className="text-xl font-semibold">{resumen.datos.copias}</dd>
               </div>
-              <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-                <dt className="text-zinc-600 dark:text-zinc-400">Cartas distintas</dt>
+              <div className="tarjeta p-3">
+                <dt className="text-tinta/75">Cartas distintas</dt>
                 <dd className="text-xl font-semibold">{resumen.datos.distintas}</dd>
               </div>
-              <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-                <dt className="text-zinc-600 dark:text-zinc-400">Valor estimado</dt>
+              <div className="tarjeta p-3">
+                <dt className="text-tinta/75">Valor estimado</dt>
                 <dd className="text-xl font-semibold">{dinero.format(resumen.datos.valorEstimado)}</dd>
               </div>
             </dl>
             {resumen.datos.sinPrecio > 0 && (
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="text-sm text-tinta/75">
                 {resumen.datos.sinPrecio === 1 ? "1 carta no tiene precio" : `${resumen.datos.sinPrecio} cartas no tienen precio`} y no suman al
                 valor.
               </p>
             )}
             <p className="flex gap-4 text-sm">
-              <a href={urlExportarInventario("csv")} download className="underline">
+              <a href={urlExportarInventario("csv")} download className="font-bold text-azul underline">
                 Descargar CSV{hayFiltros ? " (con filtros)" : ""}
               </a>
-              <a href={urlExportarInventario("xlsx")} download className="underline">
+              <a href={urlExportarInventario("xlsx")} download className="font-bold text-azul underline">
                 Descargar Excel{hayFiltros ? " (con filtros)" : ""}
               </a>
             </p>
 
-            <h3 className="mt-2 text-sm font-medium">Por idioma</h3>
+            <h3 className="mt-2 text-sm font-extrabold">Por idioma</h3>
             <ul className="flex flex-col gap-1 text-sm">
               {resumen.datos.porIdioma.map((i) => (
-                <li key={i.idioma} className="flex justify-between rounded-md border border-zinc-200 px-3 py-2 dark:border-zinc-800">
+                <li key={i.idioma} className="flex justify-between rounded-xl border-2 border-tinta bg-white px-3 py-2">
                   <span>{NOMBRES_IDIOMA[i.idioma as keyof typeof NOMBRES_IDIOMA] ?? i.idioma}</span>
-                  <span className="text-zinc-600 dark:text-zinc-400">
+                  <span className="text-tinta/75">
                     {i.copias} copias · {i.distintas} distintas
                   </span>
                 </li>
               ))}
             </ul>
 
-            <h3 className="mt-2 text-sm font-medium">Por set</h3>
+            <h3 className="mt-2 text-sm font-extrabold">Por set</h3>
             <ul className="flex flex-col gap-1 text-sm">
               {resumen.datos.porSet.map((s) => (
                 <li key={`${s.setId}|${s.idioma}`}>
                   <Link
                     href={enlace({ setId: s.setId, idioma: s.idioma })}
-                    className="flex justify-between rounded-md border border-zinc-200 px-3 py-2 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+                    className="flex justify-between rounded-xl border-2 border-tinta bg-white px-3 py-2 hover:bg-amarillo focus-visible:bg-amarillo"
                   >
                     <span>
                       {resumen.datos.nombresSet[`${s.setId}|${s.idioma}`] ?? s.setId} · {s.idioma}
                     </span>
-                    <span className="text-zinc-600 dark:text-zinc-400">
+                    <span className="text-tinta/75">
                       {s.copias} copias · {s.distintas} distintas · ver faltantes
                     </span>
                   </Link>
@@ -242,20 +242,20 @@ export default async function ReportesPage({
             ) : (
               <>
                 <p className="flex gap-4 text-sm">
-                  <a href={urlExportarFaltantes("csv")} download className="underline">
+                  <a href={urlExportarFaltantes("csv")} download className="font-bold text-azul underline">
                     Descargar CSV
                   </a>
-                  <a href={urlExportarFaltantes("xlsx")} download className="underline">
+                  <a href={urlExportarFaltantes("xlsx")} download className="font-bold text-azul underline">
                     Descargar Excel
                   </a>
                 </p>
                 <ul className="flex flex-col gap-1 text-sm">
                   {faltantes.datos.faltan.map((c) => (
-                    <li key={c.id} className="flex justify-between rounded-md border border-zinc-200 px-3 py-2 dark:border-zinc-800">
+                    <li key={c.id} className="flex justify-between rounded-xl border-2 border-tinta bg-white px-3 py-2">
                       <span>
                         {c.number} · {c.nombre}
                       </span>
-                      <span className="text-zinc-600 dark:text-zinc-400">{c.rarity ?? ""}</span>
+                      <span className="text-tinta/75">{c.rarity ?? ""}</span>
                     </li>
                   ))}
                 </ul>
