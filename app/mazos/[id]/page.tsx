@@ -8,7 +8,7 @@ import { buscarCartas, urlsImagenesOpcionales } from "@/lib/catalogo";
 import { listarCategorias } from "@/lib/categorias";
 import { obtenerLegalidadMazo } from "@/lib/legalidad-mazo";
 import { obtenerMazo, SIN_SESION } from "@/lib/mazos";
-import { COPIAS_MAX, TAMANO_MAZO } from "@/lib/reglas-mazo";
+import { COPIAS_MAX, separarProgreso, TAMANO_MAZO } from "@/lib/reglas-mazo";
 import { CANTIDAD_MAZO_MAX, CANTIDAD_MAZO_MIN } from "@/lib/validators/mazos";
 import { IDIOMAS } from "@/lib/validators/catalogo";
 import { FORMATOS_LEGALIDAD, NOMBRES_FORMATO } from "@/lib/validators/legalidad";
@@ -80,6 +80,8 @@ export default async function MazoDetallePage({
 
   // Para el panel de «Mi colección»: cuántas copias hay ya en el mazo y qué categorías hay.
   const enMazo = Object.fromEntries(lineas.map((l) => [l.cartaId, l.cantidad]));
+  // Lo que falta para llegar a 60 es avance, no error: solo lo demás se muestra en rojo.
+  const progreso = separarProgreso(reglas);
   const listaCategorias = await listarCategorias();
   const categorias = listaCategorias.ok ? listaCategorias.datos.map((c) => ({ id: c.id, nombre: c.nombre })) : [];
 
@@ -99,16 +101,35 @@ export default async function MazoDetallePage({
         <h2 id="titulo-reglas" className="font-medium">
           Reglas
         </h2>
-        {reglas.cumple ? (
-          <p role="status" className="rounded-md bg-green-100 px-4 py-2 text-sm text-green-900">
-            Cumple las reglas que se pueden comprobar.
-          </p>
-        ) : (
+        {progreso.faltan > 0 && (
+          <div className="flex flex-col gap-2 rounded-xl border-[3px] border-tinta bg-white px-4 py-3">
+            <p role="status" className="text-sm font-bold">
+              {reglas.total} de {TAMANO_MAZO} cartas · te {progreso.faltan === 1 ? "falta 1 carta" : `faltan ${progreso.faltan} cartas`}
+            </p>
+            <div
+              role="progressbar"
+              aria-label="Avance del mazo"
+              aria-valuemin={0}
+              aria-valuemax={TAMANO_MAZO}
+              aria-valuenow={reglas.total}
+              className="h-3 w-full overflow-hidden rounded-full border-2 border-tinta bg-crema"
+            >
+              <div className="h-full bg-azul" style={{ width: `${Math.round((reglas.total / TAMANO_MAZO) * 100)}%` }} />
+            </div>
+          </div>
+        )}
+        {progreso.errores.length > 0 ? (
           <ul role="alert" className="flex list-disc flex-col gap-1 rounded-md bg-red-100 py-2 pl-8 pr-4 text-sm text-red-900">
-            {reglas.errores.map((e) => (
+            {progreso.errores.map((e) => (
               <li key={`${e.regla}-${e.mensaje}`}>{e.mensaje}</li>
             ))}
           </ul>
+        ) : (
+          reglas.cumple && (
+            <p role="status" className="rounded-md bg-green-100 px-4 py-2 text-sm text-green-900">
+              Cumple las reglas que se pueden comprobar.
+            </p>
+          )
         )}
         {reglas.advertencias.length > 0 && (
           <ul className="flex list-disc flex-col gap-1 rounded-md bg-amber-100 py-2 pl-8 pr-4 text-sm text-amber-900">

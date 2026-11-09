@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COPIAS_MAX, TAMANO_MAZO, validarMazo, type EntradaMazo } from "./reglas-mazo";
+import { COPIAS_MAX, separarProgreso, TAMANO_MAZO, validarMazo, type EntradaMazo } from "./reglas-mazo";
 
 let siguiente = 1;
 function carta(parcial: Partial<EntradaMazo> = {}): EntradaMazo {
@@ -246,5 +246,45 @@ describe("con la categoría completada (PBI-X14)", () => {
     const edicion = () => carta({ nombre: "Pikachu", nombreEn: "Pikachu", categoria: null, stage: null });
     const r = validarMazo([edicion(), edicion()]);
     expect(r.advertencias[0].mensaje).toContain("etapa de Pikachu.");
+  });
+});
+
+describe("separarProgreso (PBI-X24)", () => {
+  it("un mazo a medio armar muestra lo que falta como progreso, no como error", () => {
+    const r = validarMazo([carta({ stage: "Basic", cantidad: 3 })]);
+    const p = separarProgreso(r);
+
+    expect(p.faltan).toBe(TAMANO_MAZO - 3);
+    expect(p.errores).toEqual([]);
+    expect(r.cumple).toBe(false);
+  });
+
+  it("un mazo vacío tampoco es un error: faltan las 60", () => {
+    const p = separarProgreso(validarMazo([]));
+
+    expect(p.faltan).toBe(TAMANO_MAZO);
+    expect(p.errores).toEqual([]);
+  });
+
+  it("los errores de verdad se conservan aunque el mazo esté incompleto", () => {
+    const r = validarMazo([carta({ nombre: "Pikachu", nombreEn: "Pikachu", stage: "Basic", cantidad: 5 })]);
+    const p = separarProgreso(r);
+
+    expect(p.faltan).toBe(TAMANO_MAZO - 5);
+    expect(p.errores.map((e) => e.regla)).toEqual(["copias"]);
+  });
+
+  it("pasarse de 60 sí es un error y no deja nada por completar", () => {
+    const p = separarProgreso(validarMazo(Array.from({ length: 16 }, () => carta({ cantidad: 4 }))));
+
+    expect(p.faltan).toBe(0);
+    expect(p.errores.map((e) => e.regla)).toContain("tamano");
+  });
+
+  it("con exactamente 60 cartas no falta nada", () => {
+    const p = separarProgreso(validarMazo(mazoCompleto()));
+
+    expect(p.faltan).toBe(0);
+    expect(p.errores).toEqual([]);
   });
 });
