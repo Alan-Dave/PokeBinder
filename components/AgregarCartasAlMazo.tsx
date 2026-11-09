@@ -3,6 +3,7 @@
 import { useActionState, useState, type ReactNode } from "react";
 import { agregarCartaAlMazoAccion } from "@/app/mazos/acciones";
 import type { EstadoAccion } from "@/app/coleccion/tipos";
+import ImagenConRespaldo from "@/components/ImagenConRespaldo";
 import PanelColeccion from "@/components/PanelColeccion";
 import type { CartaPanel } from "@/lib/panel-coleccion";
 import { etiquetaVariante } from "@/lib/variantes";
@@ -37,13 +38,7 @@ function TarjetaMazo({ mazoId, carta, enMazo }: { mazoId: number; carta: CartaPa
       <input type="hidden" name="mazoId" value={mazoId} />
       <input type="hidden" name="cartaId" value={carta.cartaId} />
       <span className="flex aspect-[5/7] w-full items-center justify-center overflow-hidden rounded-lg bg-[#e9e9ee]">
-        {carta.imagenUrl ? (
-          // La URL está firmada y caduca: next/image la cachearía vencida.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={carta.imagenUrl} alt={carta.nombre} className="h-full w-full object-contain" />
-        ) : (
-          <span className="px-1 text-center text-xs font-bold">Sin imagen</span>
-        )}
+        <ImagenConRespaldo src={carta.imagenUrl} alt={carta.nombre} />
       </span>
       <span className="block truncate text-xs font-extrabold">{carta.nombre}</span>
       <span className="block truncate text-xs">
