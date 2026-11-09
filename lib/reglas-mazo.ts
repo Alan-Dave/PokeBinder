@@ -168,3 +168,17 @@ export function validarMazo(entradas: readonly EntradaMazo[]): ResultadoReglas {
 
   return { total, errores, advertencias, cumple: errores.length === 0 };
 }
+
+/**
+ * Separa el avance del mazo de sus errores. Un mazo con menos de 60 cartas no es
+ * un error del usuario sino un mazo a medio armar: lo que falta se muestra como
+ * progreso, y solo lo que de verdad está mal (de más, repetido, prohibido) como error.
+ * El resultado de validarMazo no cambia: cumple sigue siendo false hasta llegar a 60.
+ */
+export function separarProgreso(r: ResultadoReglas): { faltan: number; errores: Incumplimiento[] } {
+  return {
+    faltan: Math.max(0, TAMANO_MAZO - r.total),
+    errores: r.errores.filter((e) => !(e.regla === "tamano" && r.total < TAMANO_MAZO)),
+  };
+}
+
