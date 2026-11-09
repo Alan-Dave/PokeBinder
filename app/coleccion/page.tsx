@@ -78,7 +78,7 @@ export default async function ColeccionPage({
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-8">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Mi colección</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm font-bold text-tinta/75">
           {total === 1 ? "1 registro" : `${total} registros`} en tu inventario
         </p>
         {valor.conPrecio > 0 && (
@@ -86,18 +86,18 @@ export default async function ColeccionPage({
             Valor estimado de esta página: <strong>{formatearUsd(valor.total)}</strong>
             {valor.sinPrecio > 0 && ` (sin contar ${valor.sinPrecio} sin precio)`}. Referencia de TCGplayer en
             dólares, no una oferta.{" "}
-            <Link href="/coleccion/evolucion" className="underline">
+            <Link href="/coleccion/evolucion" className="font-bold text-azul underline">
               Ver evolución del valor
             </Link>
           </p>
         )}
         {total > 0 && (
           // Es una descarga, no una ruta de la aplicación: un <a> evita la precarga de next/link.
-          <p className="flex gap-4 text-sm">
-            <a href="/coleccion/exportar?formato=csv" download className="underline">
+          <p className="flex flex-wrap gap-3 text-sm">
+            <a href="/coleccion/exportar?formato=csv" download className="boton boton-neutro !rounded-xl !px-3 !py-1 text-sm">
               Descargar CSV
             </a>
-            <a href="/coleccion/exportar?formato=xlsx" download className="underline">
+            <a href="/coleccion/exportar?formato=xlsx" download className="boton boton-neutro !rounded-xl !px-3 !py-1 text-sm">
               Descargar Excel
             </a>
           </p>
@@ -109,7 +109,7 @@ export default async function ColeccionPage({
       )}
 
       {filas.length === 0 ? (
-        <p className="rounded-md border border-dashed border-zinc-300 p-6 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+        <p className="rounded-2xl border-[3px] border-dashed border-tinta bg-white p-6 text-tinta">
           {categoriaId
             ? "Esta categoría no tiene cartas todavía. Ábrelas desde «Todas» y márcalas en «Categorías»."
             : "Tu inventario está vacío. Podrás agregar cartas desde el catálogo cuando esté disponible."}
@@ -131,9 +131,9 @@ export default async function ColeccionPage({
       )}
 
       {totalPaginas > 1 && (
-        <nav aria-label="Paginación" className="flex items-center justify-between text-sm">
+        <nav aria-label="Paginación" className="flex items-center justify-between text-sm font-bold">
           {pagina > 1 ? (
-            <Link href={enlacePagina(pagina - 1)} className="underline">
+            <Link href={enlacePagina(pagina - 1)} className="boton boton-neutro !rounded-xl !px-3 !py-1 text-sm">
               ← Anterior
             </Link>
           ) : (
@@ -143,7 +143,7 @@ export default async function ColeccionPage({
             Página {pagina} de {totalPaginas}
           </span>
           {pagina < totalPaginas ? (
-            <Link href={enlacePagina(pagina + 1)} className="underline">
+            <Link href={enlacePagina(pagina + 1)} className="boton boton-neutro !rounded-xl !px-3 !py-1 text-sm">
               Siguiente →
             </Link>
           ) : (
