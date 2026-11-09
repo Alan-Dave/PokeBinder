@@ -30,7 +30,7 @@ export default function ReportarError({ cartaId, motivos, detalleMin, detalleMax
         <select
           id={idMotivo}
           name="motivo"
-          className="rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 dark:border-zinc-700"
+          className="rounded-xl border-[3px] border-tinta bg-white px-2 py-1.5 text-base text-tinta"
         >
           {motivos.map((m) => (
             <option key={m.valor} value={m.valor}>
@@ -48,22 +48,22 @@ export default function ReportarError({ cartaId, motivos, detalleMin, detalleMax
           minLength={detalleMin}
           maxLength={detalleMax}
           rows={3}
-          className="rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 dark:border-zinc-700"
+          className="rounded-xl border-[3px] border-tinta bg-white px-2 py-1.5 text-base text-tinta"
         />
         <button
           type="submit"
           disabled={enviando}
-          className="self-start rounded-md border border-zinc-300 px-3 py-1.5 font-medium hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          className="boton boton-neutro self-start !rounded-xl !px-3 !py-1 text-sm disabled:opacity-50"
         >
           {enviando ? "Enviando…" : "Enviar reporte"}
         </button>
         {estado.error && (
-          <p role="alert" className="text-red-700 dark:text-red-400">
+          <p role="alert" className="font-bold text-[#b42318]">
             {estado.error}
           </p>
         )}
         {estado.exito && !estado.error && (
-          <p role="status" className="text-green-800 dark:text-green-400">
+          <p role="status" className="font-bold text-verde">
             Gracias: un administrador revisará tu reporte.
           </p>
         )}

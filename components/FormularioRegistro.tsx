@@ -7,7 +7,7 @@ import type { EstadoFormulario } from "@/lib/estado-formulario";
 const INICIAL: EstadoFormulario = { error: null };
 
 const CAMPO =
-  "rounded-md border border-zinc-300 bg-transparent px-3 py-2 dark:border-zinc-700";
+  "rounded-xl border-[3px] border-tinta bg-white px-3 py-2 text-base text-tinta";
 
 type Props = {
   // Los límites vienen de la página (servidor) para no cargar zod en el navegador.
@@ -28,7 +28,7 @@ export default function FormularioRegistro({
   return (
     <form action={registrar} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <label htmlFor="nombreVisible" className="text-sm font-medium">
+        <label htmlFor="nombreVisible" className="text-sm font-extrabold">
           Nombre visible
         </label>
         <input
@@ -43,7 +43,7 @@ export default function FormularioRegistro({
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label htmlFor="correo" className="text-sm font-medium">
+        <label htmlFor="correo" className="text-sm font-extrabold">
           Correo
         </label>
         <input
@@ -57,7 +57,7 @@ export default function FormularioRegistro({
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label htmlFor="contrasena" className="text-sm font-medium">
+        <label htmlFor="contrasena" className="text-sm font-extrabold">
           Contraseña
         </label>
         <input
@@ -71,19 +71,19 @@ export default function FormularioRegistro({
           required
           className={CAMPO}
         />
-        <p id="ayuda-contrasena" className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p id="ayuda-contrasena" className="text-sm text-tinta/75">
           Mínimo {contrasenaMin} caracteres. Una frase larga sirve mejor que una clave corta con
           símbolos.
         </p>
       </div>
 
       {estado.error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-sm font-bold text-[#b42318]">
           {estado.error}
         </p>
       )}
       {estado.aviso && (
-        <p role="status" className="text-sm text-green-800 dark:text-green-400">
+        <p role="status" className="text-sm font-bold text-verde">
           {estado.aviso}
         </p>
       )}
@@ -91,7 +91,7 @@ export default function FormularioRegistro({
       <button
         type="submit"
         disabled={enviando}
-        className="rounded-md bg-zinc-900 px-4 py-2 font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+        className="boton boton-rojo disabled:opacity-50"
       >
         {enviando ? "Creando cuenta…" : "Crear cuenta"}
       </button>

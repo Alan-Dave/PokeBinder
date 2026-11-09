@@ -6,7 +6,7 @@ import type { EstadoFormulario } from "@/lib/estado-formulario";
 
 const INICIAL: EstadoFormulario = { error: null };
 
-const CAMPO = "rounded-md border border-zinc-300 bg-transparent px-3 py-2 dark:border-zinc-700";
+const CAMPO = "rounded-xl border-[3px] border-tinta bg-white px-3 py-2 text-base text-tinta";
 
 export default function FormularioRecuperar() {
   const [estado, enviar, enviando] = useActionState(recuperarAccion, INICIAL);
@@ -14,19 +14,19 @@ export default function FormularioRecuperar() {
   return (
     <form action={enviar} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <label htmlFor="correo" className="text-sm font-medium">
+        <label htmlFor="correo" className="text-sm font-extrabold">
           Correo
         </label>
         <input id="correo" name="correo" type="email" autoComplete="email" maxLength={254} required className={CAMPO} />
       </div>
 
       {estado.error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-sm font-bold text-[#b42318]">
           {estado.error}
         </p>
       )}
       {estado.aviso && (
-        <p role="status" className="text-sm text-green-800 dark:text-green-400">
+        <p role="status" className="text-sm font-bold text-verde">
           {estado.aviso}
         </p>
       )}
@@ -34,7 +34,7 @@ export default function FormularioRecuperar() {
       <button
         type="submit"
         disabled={enviando}
-        className="rounded-md bg-zinc-900 px-4 py-2 font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+        className="boton boton-rojo disabled:opacity-50"
       >
         {enviando ? "Enviando…" : "Enviar enlace"}
       </button>
