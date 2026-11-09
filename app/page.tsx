@@ -1,5 +1,6 @@
 import Link from "next/link";
 import CartasDecorativas from "@/components/CartasDecorativas";
+import LogoMarca from "@/components/LogoMarca";
 import { obtenerPerfilActual } from "@/lib/auth";
 
 // Depende de la sesión del usuario: nunca se sirve desde una copia en caché.
@@ -96,6 +97,7 @@ export default async function Home() {
     <main className="flex flex-1 flex-col">
       <section className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-12 px-4 py-14 sm:px-8 md:py-20">
         <div className="min-w-0 flex-1 basis-[480px]">
+          <LogoMarca className="mb-6 h-28 w-auto md:h-36" sizes="(min-width: 768px) 324px, 253px" priority />
           <p className="mb-4 inline-block rounded-full bg-azul px-4 py-1.5 text-base font-extrabold text-white">
             Para coleccionistas de todas las edades
           </p>

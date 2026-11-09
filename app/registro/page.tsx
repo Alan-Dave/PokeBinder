@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import FormularioRegistro from "@/components/FormularioRegistro";
+import LogoMarca from "@/components/LogoMarca";
 import { obtenerPerfilActual } from "@/lib/auth";
 import { CONTRASENA_MAX, CONTRASENA_MIN, NOMBRE_MAX, NOMBRE_MIN } from "@/lib/validators/auth";
 
@@ -15,6 +16,7 @@ export default async function RegistroPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 p-8">
+      <LogoMarca className="mx-auto h-24 w-auto" priority />
       <h1 className="text-2xl font-semibold">Crear cuenta</h1>
       <FormularioRegistro
         contrasenaMin={CONTRASENA_MIN}
