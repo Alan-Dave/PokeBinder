@@ -20,7 +20,7 @@ export default async function MazosPage() {
           {resultado.error === SIN_SESION ? "Inicia sesión para ver tus mazos." : resultado.error}
         </p>
         {resultado.error === SIN_SESION && (
-          <Link href="/login" className="text-sm underline">
+          <Link href="/login" className="text-sm font-bold text-azul underline">
             Ir a iniciar sesión
           </Link>
         )}
@@ -34,7 +34,7 @@ export default async function MazosPage() {
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-8">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Mis mazos</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm text-tinta/75">
           Arma mazos de {TAMANO_MAZO} cartas y comprueba que cumplan las reglas.
         </p>
       </header>
@@ -42,7 +42,7 @@ export default async function MazosPage() {
       <FormularioMazo nombreMax={NOMBRE_MAZO_MAX} />
 
       {mazos.length === 0 ? (
-        <p className="rounded-md border border-dashed border-zinc-300 p-6 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+        <p className="rounded-2xl border-[3px] border-dashed border-tinta bg-white p-6 text-tinta">
           Aún no tienes mazos. Crea el primero arriba.
         </p>
       ) : (
@@ -51,10 +51,10 @@ export default async function MazosPage() {
             <li key={m.id}>
               <Link
                 href={`/mazos/${m.id}`}
-                className="flex items-center justify-between rounded-lg border border-zinc-200 p-4 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+                className="tarjeta flex items-center justify-between p-4 hover:bg-amarillo focus-visible:bg-amarillo"
               >
                 <span className="font-medium">{m.nombre}</span>
-                <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                <span className="text-sm text-tinta/75">
                   {m.totalCartas} de {TAMANO_MAZO} cartas
                 </span>
               </Link>
