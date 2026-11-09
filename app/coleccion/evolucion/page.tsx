@@ -38,24 +38,24 @@ export default async function EvolucionPage({ searchParams }: { searchParams: Pr
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-8">
-      <Link href="/coleccion" className="text-sm underline">
+      <Link href="/coleccion" className="text-sm font-bold text-azul underline">
         ← Volver a mi colección
       </Link>
 
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Evolución del valor</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm font-bold text-tinta/75">
           Tu colección actual valuada con los precios de mercado (TCGplayer, dólares) de los últimos {dias} días.
         </p>
       </header>
 
-      <nav aria-label="Período" className="flex gap-3 text-sm">
+      <nav aria-label="Período" className="flex flex-wrap gap-3 text-sm">
         {PERIODOS.map((p) => (
           <Link
             key={p}
             href={`/coleccion/evolucion?dias=${p}`}
             aria-current={p === dias ? "page" : undefined}
-            className={p === dias ? "font-semibold underline" : "underline"}
+            className={`boton !rounded-xl !px-3 !py-1 text-sm ${p === dias ? "boton-amarillo" : "boton-neutro"}`}
           >
             {p} días
           </Link>
@@ -63,7 +63,7 @@ export default async function EvolucionPage({ searchParams }: { searchParams: Pr
       </nav>
 
       {puntos.length === 0 ? (
-        <p className="rounded-md border border-dashed border-zinc-300 p-6 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+        <p className="rounded-2xl border-[3px] border-dashed border-tinta bg-white p-6 text-tinta">
           Todavía no hay historial de precios para tus cartas. El historial se empieza a guardar cuando abres tu
           colección o la ficha de una carta, un registro por día: vuelve en unos días.
         </p>
@@ -79,11 +79,11 @@ export default async function EvolucionPage({ searchParams }: { searchParams: Pr
       )}
 
       {inventarioRecortado && (
-        <p className="text-xs text-zinc-600 dark:text-zinc-400">
+        <p className="text-xs font-bold text-tinta/75">
           Solo se consideran los primeros registros de tu inventario; el resto no entra en el cálculo.
         </p>
       )}
-      <p className="text-xs text-zinc-600 dark:text-zinc-400">
+      <p className="text-xs font-bold text-tinta/75">
         Es una referencia orientativa: usa tu inventario de hoy con los precios de cada fecha, no refleja cartas que
         tuviste antes.
       </p>
