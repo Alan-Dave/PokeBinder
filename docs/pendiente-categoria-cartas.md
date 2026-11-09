@@ -67,8 +67,24 @@ Las reglas oficiales no limitan cuántas Energías ni cuántos Partidarios lleva
 (el límite de un Partidario por turno es de la partida, no del mazo). Validarlo sería
 inventar una regla. El límite de 4 copias ya cubre las energías especiales.
 
+## Resultado de la ingesta (9-11-2026)
+
+`ingesta/completar_categorias.py` se aplicó contra la base real, incluidos los sets traducidos de PBI-X16:
+
+| | Cartas (filas) |
+|---|---|
+| Pokémon | 78.974 |
+| Entrenador | 13.215 |
+| Energía | 1.937 (1.109 básicas y 828 especiales) |
+| Sin categoría | 1.798 antes de PBI-X16; 398 `id_api` distintos después |
+
 ## Qué sigue sin cerrarse
 
-Cartas que TCGdex no tiene (por ejemplo los sets `swsh*.5tg`) y Pokémon con etapa que
-TCGdex no entrega (VMAX, VSTAR, etc. no se completan a propósito): conservan la
-advertencia «no se pudo comprobar».
+Quedan sin categoría los sets que TCGdex no tiene (`swsh*.5tg`, colecciones francesas de
+McDonald's, 2013), los kits de entrenador `tk1a`, `tk1b`, `tk2a`, `tk2b` (la letra a/b no se
+puede asignar con certeza) y cartas sueltas dentro de sets que sí cruzan. Lo mismo ocurre con
+los Pokémon cuya etapa TCGdex no entrega (VMAX, VSTAR, etc. no se completan a propósito).
+
+Para esas cartas el mazo conserva la advertencia, que ahora **nombra las cartas sin dato**
+(hasta tres, y cuántas más) y pide confirmar a mano que haya un Pokémon Básico, en lugar de
+repetir un conteo genérico.
