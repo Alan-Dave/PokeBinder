@@ -60,22 +60,22 @@ export default async function ReportesPage({
           {resultado.error === SIN_SESION ? "Inicia sesión para ver los reportes." : resultado.error}
         </p>
       ) : resultado.datos.length === 0 ? (
-        <p className="rounded-md border border-dashed border-zinc-300 p-6 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+        <p className="rounded-2xl border-[3px] border-dashed border-tinta bg-white p-6 text-tinta">
           No hay reportes en este estado.
         </p>
       ) : (
         <ul className="flex flex-col gap-3">
           {resultado.datos.map((r) => (
-            <li key={r.id} className="flex flex-col gap-2 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+            <li key={r.id} className="flex flex-col gap-2 tarjeta p-4">
               <p className="font-medium">
                 {r.cartas ? (
-                  <Link href={`/catalogo/${r.cartas.id}`} className="underline">
+                  <Link href={`/catalogo/${r.cartas.id}`} className="font-bold text-azul underline">
                     {r.cartas.nombre}
                   </Link>
                 ) : (
                   "Carta eliminada"
                 )}
-                <span className="font-normal text-zinc-600 dark:text-zinc-400">
+                <span className="font-normal text-tinta/75">
                   {" "}
                   · {ETIQUETAS_MOTIVO[r.motivo] ?? r.motivo} · {FORMATO_FECHA.format(new Date(r.creado_en))}
                 </span>

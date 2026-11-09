@@ -99,8 +99,8 @@ function ZonaQuitar({ activa }: { activa: boolean }) {
       ref={setNodeRef}
       className={`rounded-lg border-2 border-dashed p-3 text-center text-sm ${
         isOver
-          ? "border-red-500 bg-red-50 text-red-900 dark:bg-red-950 dark:text-red-100"
-          : "border-zinc-300 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400"
+          ? "border-rojo bg-[#fee4e2] text-tinta"
+          : "border-tinta text-tinta/75"
       } ${activa ? "" : "opacity-60"}`}
     >
       Suelta aquí una carta del binder para quitarla
@@ -208,7 +208,7 @@ export default function TableroBinder({ binderId, pagina, ocupadas, categorias, 
 
       <DragOverlay>
         {arrastrando && (
-          <div className="rounded-md border border-zinc-400 bg-white px-3 py-2 text-sm shadow-lg dark:bg-zinc-900">
+          <div className="rounded-xl border-[3px] border-tinta bg-white px-3 py-2 text-sm font-bold shadow-lg">
             {arrastrando}
           </div>
         )}

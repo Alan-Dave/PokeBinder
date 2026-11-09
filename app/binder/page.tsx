@@ -20,7 +20,7 @@ export default async function BinderPage() {
           {resultado.error === SIN_SESION ? "Inicia sesión para ver tus binders." : resultado.error}
         </p>
         {resultado.error === SIN_SESION && (
-          <Link href="/login" className="text-sm underline">
+          <Link href="/login" className="text-sm font-bold text-azul underline">
             Ir a iniciar sesión
           </Link>
         )}
@@ -34,7 +34,7 @@ export default async function BinderPage() {
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-8">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Mis binders</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm text-tinta/75">
           Ordena las cartas de tu colección en páginas con la cuadrícula que prefieras.
         </p>
       </header>
@@ -42,7 +42,7 @@ export default async function BinderPage() {
       <FormularioBinder cuadriculas={CUADRICULAS} paginasMin={PAGINAS_MIN} paginasMax={PAGINAS_MAX} />
 
       {binders.length === 0 ? (
-        <p className="rounded-md border border-dashed border-zinc-300 p-6 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+        <p className="rounded-2xl border-[3px] border-dashed border-tinta bg-white p-6 text-tinta">
           Aún no tienes binders. Crea el primero arriba.
         </p>
       ) : (

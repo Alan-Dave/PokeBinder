@@ -28,10 +28,10 @@ export default async function UsuariosPage() {
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-4 p-8">
       <h1 className="text-2xl font-semibold">Usuarios y roles</h1>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-sm text-tinta/75">
         Solo un superusuario asigna roles. Nadie cambia el propio y el sistema siempre conserva al menos un
         superusuario. Cada cambio queda en la{" "}
-        <Link href="/admin/auditoria" className="underline">
+        <Link href="/admin/auditoria" className="font-bold text-azul underline">
           bitácora de auditoría
         </Link>
         .
@@ -40,7 +40,7 @@ export default async function UsuariosPage() {
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-zinc-300 dark:border-zinc-700">
+            <tr className="border-b-[3px] border-tinta">
               <th className="py-2 pr-4">Usuario</th>
               <th className="py-2 pr-4">Alta</th>
               <th className="py-2">Rol</th>
@@ -48,7 +48,7 @@ export default async function UsuariosPage() {
           </thead>
           <tbody>
             {resultado.datos.map((perfil) => (
-              <tr key={perfil.id} className="border-b border-zinc-200 align-top dark:border-zinc-800">
+              <tr key={perfil.id} className="border-b-2 border-tinta/20 align-top">
                 <td className="py-2 pr-4">{perfil.nombre_visible}</td>
                 <td className="py-2 pr-4 whitespace-nowrap">{FORMATO_FECHA.format(new Date(perfil.creado_en))}</td>
                 <td className="py-2">
