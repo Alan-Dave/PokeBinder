@@ -46,12 +46,19 @@ ESPERA_MAXIMA = 60
 PAUSA_ENTRE_PETICIONES = 0.3
 
 CATEGORIAS = ("Pokemon", "Trainer", "Energy")
+# Los sets japoneses y chinos (SV4a, S12a, SC1a...) solo existen en la lista de
+# TCGdex de su idioma, con ids propios que no chocan con los ingleses.
+IDIOMAS_TCGDEX = ("en", "ja", "zh-tw", "zh-cn")
 # Etapa de TCGdex -> forma en que el catálogo ya la guarda ('Stage 1', no 'Stage1').
 ETAPAS = {"Basic": "Basic", "Baby": "Baby", "Stage1": "Stage 1", "Stage2": "Stage 2"}
 
-# Mismos sets de Escarlata y Púrpura que lib/precios-carta.ts: sv2 -> sv02,
-# sv4pt5 -> sv04.5. Solo se traducen estos; adivinar otro cruzaría cartas ajenas.
-SET_ESCARLATA_PURPURA = re.compile(r"^sv(\d)(?:pt(\d))?$")
+# Sets que nuestro catálogo y TCGdex nombran distinto. Solo se traducen familias
+# comprobadas una a una contra TCGdex; adivinar otro cruzaría cartas ajenas.
+#   Escarlata y Púrpura: sv2 -> sv02, sv4pt5 -> sv04.5   (igual que lib/precios-carta.ts)
+#   Mega Evolución:      me1 -> me01, me2pt5 -> me02.5
+SET_ESCARLATA_PURPURA = re.compile(r"^(sv|me)(\d)(?:pt(\d))?$")
+SET_ESPADA_ESCUDO_MEDIO = re.compile(r"^swsh(\d+)pt5$")  # swsh12pt5 -> swsh12.5
+SETS_FIJOS = {"swsh45": "swsh4.5", "swsh45sv": "swsh4.5sv"}
 
 
 @dataclass(frozen=True)
@@ -62,10 +69,16 @@ class Clasificacion:
 
 
 def set_de_tcgdex(set_id: str) -> str:
+    if set_id in SETS_FIJOS:
+        return SETS_FIJOS[set_id]
+    m = SET_ESPADA_ESCUDO_MEDIO.match(set_id)
+    if m:
+        return f"swsh{m.group(1)}.5"
     m = SET_ESCARLATA_PURPURA.match(set_id)
     if not m:
         return set_id
-    return f"sv0{m.group(1)}.{m.group(2)}" if m.group(2) else f"sv0{m.group(1)}"
+    base = f"{m.group(1)}0{m.group(2)}"
+    return f"{base}.{m.group(3)}" if m.group(3) else base
 
 
 def variantes_de_id(id_api: str) -> list[str]:
@@ -157,13 +170,13 @@ def pedir_json(url: str) -> list[dict]:
     raise RuntimeError(f"TCGdex no respondió tras {REINTENTOS} intentos: {ultimo}")
 
 
-def traer_ids(filtro: str) -> set[str]:
-    """Todos los ids de TCGdex (en) que cumplen el filtro, paginando."""
+def traer_ids(filtro: str, idioma: str = "en") -> set[str]:
+    """Todos los ids de TCGdex (en el idioma dado) que cumplen el filtro, paginando."""
     ids: set[str] = set()
     pagina = 1
     while True:
         url = (
-            f"https://{HOST_API}/v2/en/cards?{filtro}"
+            f"https://{HOST_API}/v2/{idioma}/cards?{filtro}"
             f"&pagination:page={pagina}&pagination:itemsPerPage={PAGINA}"
         )
         lote = pedir_json(url)
@@ -210,19 +223,20 @@ def aplicar(clasificadas: dict[str, Clasificacion], url: str, password: str) -> 
         return cur.rowcount
 
 
+def traer_en_todos_los_idiomas(filtro: str, etiqueta: str) -> set[str]:
+    ids: set[str] = set()
+    for idioma in IDIOMAS_TCGDEX:
+        lote = traer_ids(filtro, idioma)
+        print(f"  TCGdex {etiqueta} ({idioma}): {len(lote)} cartas", flush=True)
+        ids |= lote
+        time.sleep(PAUSA_ENTRE_PETICIONES)
+    return ids
+
+
 def descargar_listas() -> tuple[dict[str, set[str]], set[str], dict[str, set[str]]]:
-    por_categoria = {}
-    for c in CATEGORIAS:
-        por_categoria[c] = traer_ids(f"category={c}")
-        print(f"  TCGdex {c}: {len(por_categoria[c])} cartas")
-        time.sleep(PAUSA_ENTRE_PETICIONES)
-    basicas = traer_ids("category=Energy&energyType=Normal")
-    print(f"  TCGdex energías básicas: {len(basicas)}")
-    por_etapa = {}
-    for etapa in ETAPAS:
-        por_etapa[etapa] = traer_ids(f"stage={etapa}")
-        print(f"  TCGdex etapa {etapa}: {len(por_etapa[etapa])} cartas")
-        time.sleep(PAUSA_ENTRE_PETICIONES)
+    por_categoria = {c: traer_en_todos_los_idiomas(f"category={c}", c) for c in CATEGORIAS}
+    basicas = traer_en_todos_los_idiomas("category=Energy&energyType=Normal", "energías básicas")
+    por_etapa = {e: traer_en_todos_los_idiomas(f"stage={e}", f"etapa {e}") for e in ETAPAS}
     return por_categoria, basicas, por_etapa
 
 

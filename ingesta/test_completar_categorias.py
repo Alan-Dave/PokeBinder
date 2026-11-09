@@ -24,6 +24,23 @@ class VariantesDeId(unittest.TestCase):
         self.assertIn("sv02-011", variantes_de_id("sv2-11"))
         self.assertIn("sv04.5-101", variantes_de_id("sv4pt5-101"))
 
+    def test_traduce_los_sets_de_mega_evolucion(self):
+        self.assertIn("me01-001", variantes_de_id("me1-1"))
+        self.assertIn("me02.5-005", variantes_de_id("me2pt5-5"))
+
+    def test_traduce_swsh_punto_cinco_y_los_sets_fijos(self):
+        self.assertIn("swsh12.5-025", variantes_de_id("swsh12pt5-25"))
+        self.assertIn("swsh4.5sv-SV001", variantes_de_id("swsh45sv-SV001"))
+        self.assertIn("swsh4.5-007", variantes_de_id("swsh45-7"))
+
+    def test_no_adivina_los_sets_dudosos(self):
+        # Black Bolt / White Flare: no se sabe cuál es cuál sin ver los nombres.
+        for dudoso in ("rsv10pt5-1", "zsv10pt5-1"):
+            self.assertFalse(any("sv10.5" in v or "sv10" == v.split("-")[0] for v in variantes_de_id(dudoso)))
+
+    def test_los_sets_japoneses_solo_se_rellenan(self):
+        self.assertEqual(variantes_de_id("SV4a-5"), ["SV4a-5", "SV4a-005"])
+
     def test_no_traduce_otros_sets(self):
         self.assertEqual(variantes_de_id("swsh10.5tg-TG01"), ["swsh10.5tg-TG01"])
 
