@@ -58,7 +58,41 @@ ETAPAS = {"Basic": "Basic", "Baby": "Baby", "Stage1": "Stage 1", "Stage2": "Stag
 #   Mega Evolución:      me1 -> me01, me2pt5 -> me02.5
 SET_ESCARLATA_PURPURA = re.compile(r"^(sv|me)(\d)(?:pt(\d))?$")
 SET_ESPADA_ESCUDO_MEDIO = re.compile(r"^swsh(\d+)pt5$")  # swsh12pt5 -> swsh12.5
-SETS_FIJOS = {"swsh45": "swsh4.5", "swsh45sv": "swsh4.5sv"}
+#
+# Sets sueltos (PBI-X16). Cada equivalencia se comprobó contra TCGdex por la
+# identidad del set y por la cantidad de cartas (la de nuestra base contra la de
+# TCGdex). No se traducen los kits de entrenador tk1a/tk1b/tk2a/tk2b: no se sabe
+# cuál letra es cuál carta del par, y una a/b invertida cruzaría cartas ajenas.
+SETS_FIJOS = {
+    "swsh45": "swsh4.5",
+    "swsh45sv": "swsh4.5sv",
+    "swsh35": "swsh3.5",  # Champion's Path (80)
+    "swsh12pt5gg": "swsh12.5gg",  # Crown Zenith Galarian Gallery (70)
+    "sm35": "sm3.5",  # Shining Legends
+    "sm75": "sm7.5",  # Dragon Majesty
+    "pgo": "swsh10.5",  # Pokémon GO (88)
+    "base6": "lc",  # Legendary Collection (110)
+    # Black Bolt tiene 172 cartas y White Flare 173: la cantidad las distingue.
+    "zsv10pt5": "sv10.5b",
+    "rsv10pt5": "sv10.5w",
+    # Colecciones de McDonald's. mcd13 no existe en TCGdex.
+    "mcd11": "2011bw",
+    "mcd12": "2012bw",
+    "mcd14": "2014xy",
+    "mcd15": "2015xy",
+    "mcd16": "2016xy",
+    "mcd17": "2017sm",
+    "mcd18": "2018sm",
+    "mcd19": "2019sm",
+    "mcd21": "2021swsh",
+    "mcd22": "2022swsh",
+    "mcd23": "2023sv",
+    "mcd24": "2024sv",
+    "cel25c": "cel25cc",  # Celebrations Classic Collection (25)
+    "fut20": "fut2020",  # Pokémon Futsal 2020 (5)
+    "hsp": "hgssp",  # HGSS Black Star Promos (25)
+    "bp": "bog",  # Best of Game (9)
+}
 
 
 @dataclass(frozen=True)
