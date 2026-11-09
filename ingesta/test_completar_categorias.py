@@ -33,10 +33,25 @@ class VariantesDeId(unittest.TestCase):
         self.assertIn("swsh4.5sv-SV001", variantes_de_id("swsh45sv-SV001"))
         self.assertIn("swsh4.5-007", variantes_de_id("swsh45-7"))
 
-    def test_no_adivina_los_sets_dudosos(self):
-        # Black Bolt / White Flare: no se sabe cuál es cuál sin ver los nombres.
-        for dudoso in ("rsv10pt5-1", "zsv10pt5-1"):
-            self.assertFalse(any("sv10.5" in v or "sv10" == v.split("-")[0] for v in variantes_de_id(dudoso)))
+    def test_traduce_los_sets_sueltos_comprobados(self):
+        esperados = {
+            "swsh35": "swsh3.5", "swsh12pt5gg": "swsh12.5gg", "sm35": "sm3.5", "sm75": "sm7.5",
+            "pgo": "swsh10.5", "base6": "lc", "zsv10pt5": "sv10.5b", "rsv10pt5": "sv10.5w",
+            "mcd11": "2011bw", "mcd19": "2019sm", "mcd21": "2021swsh", "mcd22": "2022swsh",
+            "cel25c": "cel25cc", "fut20": "fut2020", "hsp": "hgssp", "bp": "bog",
+        }
+        for ours, tcgdex in esperados.items():
+            self.assertIn(f"{tcgdex}-1", variantes_de_id(f"{ours}-1"), ours)
+
+    def test_black_bolt_y_white_flare_no_se_cruzan(self):
+        # zsv10pt5 (172 cartas) es Black Bolt y rsv10pt5 (173) es White Flare.
+        self.assertNotIn("sv10.5w-1", variantes_de_id("zsv10pt5-1"))
+        self.assertNotIn("sv10.5b-1", variantes_de_id("rsv10pt5-1"))
+
+    def test_los_kits_de_entrenador_ambiguos_no_se_traducen(self):
+        for ambiguo in ("tk1a-1", "tk1b-1", "tk2a-1", "tk2b-1"):
+            self.assertEqual(variantes_de_id(ambiguo)[0], ambiguo)
+            self.assertFalse(any(v.startswith("tk-") for v in variantes_de_id(ambiguo)))
 
     def test_los_sets_japoneses_solo_se_rellenan(self):
         self.assertEqual(variantes_de_id("SV4a-5"), ["SV4a-5", "SV4a-005"])
