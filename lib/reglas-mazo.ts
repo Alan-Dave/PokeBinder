@@ -92,6 +92,14 @@ function tieneSubtipo(entrada: EntradaMazo, subtipo: string): boolean {
   return entrada.subtipos.some((s) => s.toLowerCase() === buscado);
 }
 
+/** «A», «A y B», «A, B y C» o «A, B, C y 2 más»: nombra hasta tres y cuenta el resto. */
+function listaDeNombres(nombres: readonly string[], maximo = 3): string {
+  const unicos = [...new Set(nombres)];
+  if (unicos.length === 1) return unicos[0];
+  if (unicos.length <= maximo) return `${unicos.slice(0, -1).join(", ")} y ${unicos[unicos.length - 1]}`;
+  return `${unicos.slice(0, maximo).join(", ")} y ${unicos.length - maximo} más`;
+}
+
 function plural(n: number, singular: string, plural: string): string {
   return n === 1 ? `${n} ${singular}` : `${n} ${plural}`;
 }
@@ -154,11 +162,11 @@ export function validarMazo(entradas: readonly EntradaMazo[]): ResultadoReglas {
   if (total > 0) {
     const hayBasico = entradas.some((e) => e.stage !== null && ETAPAS_BASICAS.has(e.stage.toLowerCase()));
     if (!hayBasico) {
-      const sinDato = entradas.filter((e) => !sabemosQueNoEsBasico(e)).length;
-      if (sinDato > 0) {
+      const sinDato = entradas.filter((e) => !sabemosQueNoEsBasico(e));
+      if (sinDato.length > 0) {
         advertencias.push({
           regla: "basico",
-          mensaje: `No se pudo comprobar que el mazo tenga un Pokémon Básico: el catálogo no trae la categoría de ${sinDato} de las ${plural(entradas.length, "carta distinta", "cartas distintas")} del mazo.`,
+          mensaje: `No se pudo comprobar que el mazo tenga un Pokémon Básico porque el catálogo no tiene la categoría o la etapa de ${listaDeNombres(sinDato.map((e) => e.nombre))}. Confirma tú que alguna lo sea.`,
         });
       } else {
         errores.push({ regla: "basico", mensaje: "El mazo necesita al menos un Pokémon Básico." });

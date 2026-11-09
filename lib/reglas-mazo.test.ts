@@ -146,13 +146,17 @@ describe("Pokémon Básico", () => {
   });
 
   it("avisa, sin aprobar ni rechazar, cuando hay cartas sin categoría", () => {
-    const r = validarMazo([carta({ stage: null }), carta({ stage: null }), carta({ stage: "Item" })]);
+    const r = validarMazo([
+      carta({ nombre: "Carta A", nombreEn: "Card A", stage: null }),
+      carta({ nombre: "Carta B", nombreEn: "Card B", stage: null }),
+      carta({ stage: "Item" }),
+    ]);
     expect(reglas(r)).not.toContain("basico");
     expect(r.advertencias).toEqual([
       {
         regla: "basico",
         mensaje:
-          "No se pudo comprobar que el mazo tenga un Pokémon Básico: el catálogo no trae la categoría de 2 de las 3 cartas distintas del mazo.",
+          "No se pudo comprobar que el mazo tenga un Pokémon Básico porque el catálogo no tiene la categoría o la etapa de Carta A y Carta B. Confirma tú que alguna lo sea.",
       },
     ]);
   });
@@ -223,8 +227,24 @@ describe("con la categoría completada (PBI-X14)", () => {
   it("cuenta como incierta solo la carta sin dato, no las que ya se sabe que no son Pokémon", () => {
     const r = validarMazo([
       carta({ categoria: "Trainer", stage: null }),
-      carta({ categoria: null, stage: null }),
+      carta({ nombre: "Sin categoría", categoria: null, stage: null }),
     ]);
-    expect(r.advertencias[0].mensaje).toContain("de 1 de las 2 cartas distintas");
+    expect(r.advertencias[0].mensaje).toContain("de Sin categoría. Confirma");
+  });
+
+  it("nombra hasta tres cartas sin dato y cuenta el resto", () => {
+    const sinDato = (n: string) => carta({ nombre: n, nombreEn: n, categoria: null, stage: null });
+    const mensaje = (nombres: string[]) => validarMazo(nombres.map(sinDato)).advertencias[0].mensaje;
+
+    expect(mensaje(["Uno"])).toContain("etapa de Uno.");
+    expect(mensaje(["Uno", "Dos"])).toContain("etapa de Uno y Dos.");
+    expect(mensaje(["Uno", "Dos", "Tres"])).toContain("etapa de Uno, Dos y Tres.");
+    expect(mensaje(["Uno", "Dos", "Tres", "Cuatro", "Cinco"])).toContain("etapa de Uno, Dos, Tres y 2 más.");
+  });
+
+  it("no repite el nombre de una carta que está en dos ediciones", () => {
+    const edicion = () => carta({ nombre: "Pikachu", nombreEn: "Pikachu", categoria: null, stage: null });
+    const r = validarMazo([edicion(), edicion()]);
+    expect(r.advertencias[0].mensaje).toContain("etapa de Pikachu.");
   });
 });
