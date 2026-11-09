@@ -8,7 +8,7 @@ import type { LineaMazo } from "@/lib/mazos";
 const INICIAL: EstadoAccion = { error: null, exito: false };
 
 const BOTON =
-  "rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800";
+  "boton boton-neutro !rounded-xl !px-3 !py-1 text-sm disabled:opacity-50";
 
 type Props = {
   mazoId: number;
@@ -26,11 +26,11 @@ export default function FilaMazo({ mazoId, linea, min, max }: Props) {
   const idCantidad = `cantidad-mazo-${linea.cartaId}`;
 
   return (
-    <li className="flex flex-col gap-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+    <li className="flex flex-col gap-2 tarjeta p-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="font-medium">{linea.nombre}</p>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-sm text-tinta/75">
             {linea.idApi} · {linea.idioma}
           </p>
         </div>
@@ -52,7 +52,7 @@ export default function FilaMazo({ mazoId, linea, min, max }: Props) {
               step={1}
               defaultValue={linea.cantidad}
               required
-              className="w-20 rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
+              className="w-20 rounded-xl border-[3px] border-tinta bg-white px-2 py-1.5 text-sm text-tinta"
             />
             <button type="submit" disabled={guardando} className={BOTON}>
               {guardando ? "Guardando…" : "Guardar"}
@@ -70,7 +70,7 @@ export default function FilaMazo({ mazoId, linea, min, max }: Props) {
       </div>
 
       {error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-sm font-bold text-[#b42318]">
           {error}
         </p>
       )}

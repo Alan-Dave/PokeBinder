@@ -96,10 +96,10 @@ export default function VisorImagen({ url, urlHd, alt }: Props) {
         ref={dialogo}
         aria-label={`Imagen ampliada de ${alt}`}
         onClick={alHacerClicEnFondo}
-        className="m-auto h-[90vh] w-[90vw] max-w-3xl rounded-lg bg-zinc-100 p-0 backdrop:bg-black/70 dark:bg-zinc-900"
+        className="m-auto h-[90vh] w-[90vw] max-w-3xl rounded-2xl border-4 border-tinta bg-crema p-0 backdrop:bg-black/70"
       >
         <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between gap-2 border-b border-zinc-300 p-2 dark:border-zinc-700">
+          <div className="flex items-center justify-between gap-2 border-b-[3px] border-tinta p-2">
             <span className="text-sm" aria-live="polite">
               {modo === "zoom" ? `Zoom ${Math.round(zoom * 100)} %` : "Vista 3D"}
             </span>
@@ -107,14 +107,14 @@ export default function VisorImagen({ url, urlHd, alt }: Props) {
               <button
                 type="button"
                 onClick={() => setModo(modo === "3d" ? "zoom" : "3d")}
-                className="rounded-md border border-zinc-400 px-3 py-1 text-sm"
+                className="boton boton-neutro !rounded-xl !px-3 !py-1 text-sm"
               >
                 {modo === "3d" ? "Modo zoom" : "Modo 3D"}
               </button>
               <button
                 type="button"
                 onClick={cerrar}
-                className="rounded-md border border-zinc-400 px-3 py-1 text-sm"
+                className="boton boton-neutro !rounded-xl !px-3 !py-1 text-sm"
               >
                 Cerrar
               </button>

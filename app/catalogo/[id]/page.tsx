@@ -40,7 +40,7 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
         <p role="alert" className="rounded-md bg-red-100 px-4 py-2 text-red-900">
           {resultado.error}
         </p>
-        <Link href="/catalogo" className="text-sm underline">
+        <Link href="/catalogo" className="text-sm font-bold text-azul underline">
           ← Volver al catálogo
         </Link>
       </main>
@@ -72,26 +72,26 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-8">
-      <Link href="/catalogo" className="text-sm underline">
+      <Link href="/catalogo" className="text-sm font-bold text-azul underline">
         ← Volver al catálogo
       </Link>
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-        <div className="flex aspect-[5/7] w-full max-w-md items-center justify-center overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-900">
+        <div className="flex aspect-[5/7] w-full max-w-md items-center justify-center overflow-hidden rounded-xl border-[3px] border-tinta bg-[#e9e9ee]">
           <VisorImagen url={url ?? null} urlHd={`/api/cartas/${carta.id}/imagen-hd`} alt={carta.nombre} />
         </div>
 
         <div className="flex flex-col gap-6">
           <div>
             <h1 className="text-3xl font-semibold">{carta.nombre}</h1>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">{carta.id_api}</p>
+            <p className="text-sm text-tinta/75">{carta.id_api}</p>
           </div>
 
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
             {datos.map(([etiqueta, valor]) => (
               <div key={etiqueta} className="contents">
                 <dt className="font-medium">{etiqueta}</dt>
-                <dd className="text-zinc-700 dark:text-zinc-300">{valor}</dd>
+                <dd className="font-bold text-tinta">{valor}</dd>
               </div>
             ))}
           </dl>

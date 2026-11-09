@@ -27,7 +27,7 @@ const NOMBRES_IDIOMA: Record<(typeof IDIOMAS)[number], string> = {
   zh: "Chino",
 };
 
-const CAMPO = "rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700";
+const CAMPO = "rounded-xl border-[3px] border-tinta bg-white px-2 py-1.5 text-sm text-tinta";
 
 // La ruta llega como texto: solo dígitos, de 1 a 15, sin ceros a la izquierda.
 function entero(texto: string | undefined): number {
@@ -61,7 +61,7 @@ export default async function MazoDetallePage({
         <p role="alert" className="rounded-md bg-red-100 px-4 py-2 text-red-900">
           {resultado.error === SIN_SESION ? "Inicia sesión para ver tu mazo." : resultado.error}
         </p>
-        <Link href={resultado.error === SIN_SESION ? "/login" : "/mazos"} className="text-sm underline">
+        <Link href={resultado.error === SIN_SESION ? "/login" : "/mazos"} className="text-sm font-bold text-azul underline">
           {resultado.error === SIN_SESION ? "Ir a iniciar sesión" : "Volver a mis mazos"}
         </Link>
       </main>
@@ -86,11 +86,11 @@ export default async function MazoDetallePage({
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-8">
       <header className="flex flex-col gap-1">
-        <Link href="/mazos" className="text-sm underline">
+        <Link href="/mazos" className="text-sm font-bold text-azul underline">
           ← Mis mazos
         </Link>
         <h1 className="text-2xl font-semibold">{mazo.nombre}</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm text-tinta/75">
           {reglas.total} de {TAMANO_MAZO} cartas · máximo {COPIAS_MAX} copias por nombre
         </p>
       </header>
@@ -139,7 +139,7 @@ export default async function MazoDetallePage({
           </label>
           <button
             type="submit"
-            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className="boton boton-neutro !rounded-xl !px-3 !py-1 text-sm"
           >
             Comprobar
           </button>
@@ -180,7 +180,7 @@ export default async function MazoDetallePage({
                   ))}
               </ul>
             )}
-            <p className="text-xs text-zinc-600 dark:text-zinc-400">
+            <p className="text-xs text-tinta/75">
               Datos de TCGdex. Los formatos rotan: la comprobación se actualiza cada 24 horas.
             </p>
           </>
@@ -192,7 +192,7 @@ export default async function MazoDetallePage({
           Cartas del mazo
         </h2>
         {lineas.length === 0 ? (
-          <p className="rounded-md border border-dashed border-zinc-300 p-6 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+          <p className="rounded-2xl border-[3px] border-dashed border-tinta bg-white p-6 text-tinta">
             El mazo está vacío. Busca cartas abajo para agregarlas.
           </p>
         ) : (
@@ -213,7 +213,7 @@ export default async function MazoDetallePage({
       {lineas.length > 0 && (
         <p className="text-sm">
           {/* Es una descarga, no una ruta de la aplicación: un <a> evita la precarga de next/link. */}
-          <a href={`/mazos/${mazo.id}/proxies`} download className="underline">
+          <a href={`/mazos/${mazo.id}/proxies`} download className="font-bold text-azul underline">
             Descargar proxies (PDF, 63 × 88 mm)
           </a>
         </p>
@@ -249,7 +249,7 @@ export default async function MazoDetallePage({
                 </label>
                 <button
                   type="submit"
-                  className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                  className="boton boton-neutro !rounded-xl !px-3 !py-1 text-sm"
                 >
                   Buscar
                 </button>
@@ -262,13 +262,13 @@ export default async function MazoDetallePage({
               )}
               {busqueda?.ok &&
                 (busqueda.datos.filas.length === 0 ? (
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">No hay cartas que coincidan con la búsqueda.</p>
+                  <p className="text-sm text-tinta/75">No hay cartas que coincidan con la búsqueda.</p>
                 ) : (
                   <ul className="flex flex-col gap-2">
                     {busqueda.datos.filas.map((carta) => (
                       <li
                         key={carta.id}
-                        className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
+                        className="flex items-center justify-between gap-3 tarjeta p-3"
                       >
                         <div className="flex min-w-0 items-center gap-3">
                           <span className="flex aspect-[5/7] w-14 shrink-0 items-center justify-center overflow-hidden rounded-md bg-[#e9e9ee]">
@@ -280,7 +280,7 @@ export default async function MazoDetallePage({
                           </span>
                           <div className="min-w-0">
                             <p className="truncate font-medium">{carta.nombre}</p>
-                            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                            <p className="text-sm text-tinta/75">
                               {carta.set_id} · {carta.number} · {carta.idioma}
                             </p>
                           </div>
