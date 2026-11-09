@@ -1,4 +1,4 @@
-import { decodePDFRawStream, PDFArray, PDFDocument, PDFRawStream } from "pdf-lib";
+import { decodePDFRawStream, PDFArray, PDFDocument, PDFName, PDFRawStream } from "pdf-lib";
 import sharp from "sharp";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,6 +11,7 @@ vi.mock("@/lib/mazos", () => ({ obtenerMazo: vi.fn() }));
 import { urlsImagenesOpcionales } from "@/lib/catalogo";
 import { obtenerImagenHd } from "@/lib/imagen-hd";
 import { obtenerMazo } from "@/lib/mazos";
+import { IMAGEN_NO_DISPONIBLE_BASE64 } from "./imagen-no-disponible-datos";
 import { PROXIES_MAX } from "./proxies";
 import { generarProxiesMazo } from "./proxies-pdf";
 
@@ -143,7 +144,7 @@ describe("generarProxiesMazo: el PDF", () => {
   });
 });
 
-describe("generarProxiesMazo: imagen de respaldo y recuadro", () => {
+describe("generarProxiesMazo: imagen de respaldo e ilustración", () => {
   const URL_BUCKET = "https://proyecto.supabase.co/storage/v1/object/sign/Images/a.webp?token=t";
 
   function respuestaFetch(bytes: Uint8Array, ok = true) {
@@ -167,7 +168,7 @@ describe("generarProxiesMazo: imagen de respaldo y recuadro", () => {
     ["host distinto del proyecto", "https://malo.example.com/a.webp"],
     ["http sin cifrar", "http://proyecto.supabase.co/a.webp"],
     ["URL inválida", "no es una url"],
-  ])("no descarga de una URL con %s y dibuja un recuadro", async (_, url) => {
+  ])("no descarga de una URL con %s y dibuja la ilustración de imagen no disponible", async (_, url) => {
     mazo([linea(1, 1)]);
     vi.mocked(urlsImagenesOpcionales).mockResolvedValue({ 1: url });
     const fetchFalso = vi.fn();
@@ -177,7 +178,8 @@ describe("generarProxiesMazo: imagen de respaldo y recuadro", () => {
 
     expect(fetchFalso).not.toHaveBeenCalled();
     expect(r.ok).toBe(true);
-    expect(await contenido(r)).not.toMatch(MATRIZ_CARTA);
+    // Lo único que se dibuja a tamaño de carta es la ilustración de reemplazo.
+    expect((await contenido(r)).match(MATRIZ_CARTA)).toHaveLength(1);
   });
 
   it.each([
@@ -185,7 +187,7 @@ describe("generarProxiesMazo: imagen de respaldo y recuadro", () => {
     ["imagen demasiado grande", () => respuestaFetch(new Uint8Array(2 * 1024 * 1024 + 1))],
     ["archivo que no es una imagen", () => respuestaFetch(new Uint8Array([1, 2, 3, 4]))],
     ["fallo de red", () => vi.fn().mockRejectedValue(new Error("red"))],
-  ])("si el bucket falla (%s) dibuja un recuadro y no rompe el PDF", async (_, fabricar) => {
+  ])("si el bucket falla (%s) dibuja la ilustración y no rompe el PDF", async (_, fabricar) => {
     mazo([linea(1, 1)]);
     vi.mocked(urlsImagenesOpcionales).mockResolvedValue({ 1: URL_BUCKET });
     vi.stubGlobal("fetch", fabricar());
@@ -209,7 +211,7 @@ describe("generarProxiesMazo: imagen de respaldo y recuadro", () => {
     expect(await contenido(r)).toMatch(MATRIZ_CARTA);
   });
 
-  it("sin ninguna imagen genera recuadros, incluso con nombres no latinos o muy largos", async () => {
+  it("sin ninguna imagen usa la ilustración, incluso con nombres no latinos o muy largos", async () => {
     mazo([linea(1, 1, "ピカチュウ"), linea(2, 1, "Un nombre larguísimo ".repeat(10)), linea(3, 1, "Pokémon Épico")]);
 
     const r = await generarProxiesMazo({ mazoId: 5 });
@@ -231,5 +233,47 @@ describe("generarProxiesMazo: imagen de respaldo y recuadro", () => {
     vi.mocked(obtenerImagenHd).mockRejectedValue(new Error("detalle interno"));
 
     expect(await generarProxiesMazo({ mazoId: 5 })).toEqual({ ok: false, error: "No se pudo generar el PDF." });
+  });
+});
+
+describe("generarProxiesMazo: carta sin imagen (PBI-X17)", () => {
+  it("dibuja la ilustración en cada copia pero la incrusta una sola vez", async () => {
+    mazo([linea(1, 4, "Pikachu")]);
+
+    const r = await generarProxiesMazo({ mazoId: 5 });
+
+    expect(r.ok).toBe(true);
+    expect((await contenido(r)).match(MATRIZ_CARTA)).toHaveLength(4);
+    const doc = await PDFDocument.load(r.ok ? r.datos.pdf : new Uint8Array());
+    const imagenes = doc.context.enumerateIndirectObjects().filter(([, o]) => o instanceof PDFRawStream && o.dict.get(PDFName.of("Subtype")) === PDFName.of("Image"));
+    expect(imagenes).toHaveLength(1);
+  });
+
+  it("escribe el nombre de la carta sobre la ilustración", async () => {
+    mazo([linea(1, 1, "Pikachu")]);
+
+    const texto = await contenido(await generarProxiesMazo({ mazoId: 5 }));
+
+    // pdf-lib escribe el texto en hexadecimal: «Pikachu» en WinAnsi.
+    const hex = Buffer.from("Pikachu", "latin1").toString("hex").toUpperCase();
+    expect(texto.toUpperCase()).toContain(`<${hex}> TJ`);
+  });
+
+  it("no incrusta la ilustración si todas las cartas tienen imagen", async () => {
+    mazo([linea(1, 1)]);
+    vi.mocked(obtenerImagenHd).mockResolvedValue({ bytes: await imagen() });
+
+    const r = await generarProxiesMazo({ mazoId: 5 });
+    const doc = await PDFDocument.load(r.ok ? r.datos.pdf : new Uint8Array());
+    const imagenes = doc.context.enumerateIndirectObjects().filter(([, o]) => o instanceof PDFRawStream && o.dict.get(PDFName.of("Subtype")) === PDFName.of("Image"));
+
+    expect(imagenes).toHaveLength(1);
+  });
+
+  it("la copia incluida en el código es idéntica al archivo de public/", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const archivo = await readFile("public/imagen-no-disponible.webp");
+
+    expect(Buffer.from(IMAGEN_NO_DISPONIBLE_BASE64, "base64").equals(archivo)).toBe(true);
   });
 });

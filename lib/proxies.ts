@@ -77,12 +77,12 @@ export function marcasDeCorte(): Marca[] {
   return marcas;
 }
 
-export type LineaProxy = { cartaId: number; nombre: string; cantidad: number };
-export type CartaProxy = { cartaId: number; nombre: string };
+export type LineaProxy = { cartaId: number; nombre: string; nombreEn?: string | null; cantidad: number };
+export type CartaProxy = { cartaId: number; nombre: string; nombreEn?: string | null };
 
 /** Una carta por copia: tres copias de una carta ocupan tres casillas. */
 export function expandirCopias(lineas: readonly LineaProxy[]): CartaProxy[] {
-  return lineas.flatMap((l) => Array.from({ length: l.cantidad }, () => ({ cartaId: l.cartaId, nombre: l.nombre })));
+  return lineas.flatMap((l) => Array.from({ length: l.cantidad }, () => ({ cartaId: l.cartaId, nombre: l.nombre, nombreEn: l.nombreEn })));
 }
 
 export function paginar<T>(items: readonly T[], porPagina: number = CARTAS_POR_PAGINA): T[][] {
@@ -102,4 +102,18 @@ export function textoSeguro(nombre: string): string {
     .replace(/[^\x20-\x7E]/g, "")
     .trim();
   return limpio === "" ? "Carta" : limpio;
+}
+
+const TIENE_LETRAS = /[A-Za-z0-9]/;
+
+/**
+ * Nombre que se escribe en un proxy sin imagen. Si el propio no tiene ni una
+ * letra o cifra imprimible (por ejemplo «<>» o puro kana), no identifica la
+ * carta: se usa el de su edición en inglés, si lo hay.
+ */
+export function nombreParaProxy(nombre: string, nombreEn?: string | null): string {
+  const propio = textoSeguro(nombre);
+  if (nombre !== "" && TIENE_LETRAS.test(propio) && propio !== "Carta") return nombre;
+  if (nombreEn && TIENE_LETRAS.test(textoSeguro(nombreEn)) && textoSeguro(nombreEn) !== "Carta") return nombreEn;
+  return nombre;
 }
