@@ -109,7 +109,7 @@ begin
 
   -- 5. CREACIÓN A NOMBRE DE OTRO: with check lo rechaza con error.
   begin
-    insert into public.inventario (usuario_id, carta_id, variante, cantidad) values (v_b, v_carta, 'fantasma', 1);
+    insert into public.inventario (usuario_id, carta_id, variante, cantidad) values (v_b, v_carta, v_variante, 1);
     raise exception 'FALLO: A creó inventario a nombre de B';
   exception when insufficient_privilege then null;
   end;
