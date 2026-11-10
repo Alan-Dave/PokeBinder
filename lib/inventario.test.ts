@@ -208,6 +208,31 @@ describe("listarInventario", () => {
     expect(llamadas).toContainEqual(["range", [0, TAMANO_PAGINA - 1]]);
   });
 
+  it("sin categoría no une la tabla de pertenencia", async () => {
+    const { llamadas } = clienteFalso({ respuesta: { data: [], count: 0 } });
+
+    await listarInventario({ pagina: 1 });
+
+    expect(llamadas.some(([m, a]) => m === "select" && String(a[0]).includes("categoria_cartas"))).toBe(false);
+    expect(llamadas.some(([m]) => m === "eq")).toBe(false);
+  });
+
+  it("con categoría filtra por ella con una unión interna", async () => {
+    const { llamadas } = clienteFalso({ respuesta: { data: [], count: 0 } });
+
+    expect((await listarInventario({ pagina: 1, categoriaId: 4 })).ok).toBe(true);
+
+    expect(llamadas.some(([m, a]) => m === "select" && String(a[0]).includes("categoria_cartas!inner"))).toBe(true);
+    expect(llamadas).toContainEqual(["eq", ["categoria_cartas.categoria_id", 4]]);
+  });
+
+  it.each([0, -2, 1.5, Number.NaN])("rechaza la categoría %s sin tocar la base", async (categoriaId) => {
+    const { cliente } = clienteFalso();
+
+    expect((await listarInventario({ categoriaId })).ok).toBe(false);
+    expect(cliente.from).not.toHaveBeenCalled();
+  });
+
   it("rechaza una página inválida sin tocar la base", async () => {
     const { cliente } = clienteFalso();
 

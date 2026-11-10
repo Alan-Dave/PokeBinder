@@ -99,6 +99,13 @@ describe("listarInventarioSchema", () => {
     expect(listarInventarioSchema.safeParse({ pagina: 1.5 }).success).toBe(false);
   });
 
+  it("acepta una categoría opcional y rechaza ids inválidos", () => {
+    expect(listarInventarioSchema.parse({ categoriaId: 3 })).toEqual({ pagina: 1, categoriaId: 3 });
+    for (const categoriaId of [0, -1, 1.5, Number.NaN, "3" as unknown as number]) {
+      expect(listarInventarioSchema.safeParse({ categoriaId }).success).toBe(false);
+    }
+  });
+
   it("da un mensaje en español cuando la página no es un número", () => {
     for (const pagina of [Number.NaN, "2" as unknown as number]) {
       const r = listarInventarioSchema.safeParse({ pagina });

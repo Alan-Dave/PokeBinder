@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buscarCatalogoSchema, idDesdeRuta, patronPrefijo } from "./catalogo";
+import { buscarCatalogoSchema, idDesdeRuta, patronContiene, patronPrefijo } from "./catalogo";
 
 describe("buscarCatalogoSchema", () => {
   it("acepta una búsqueda vacía y usa la página 1", () => {
@@ -81,6 +81,23 @@ describe("patronPrefijo", () => {
 
   it("una entrada con forma de inyección queda como texto literal", () => {
     expect(patronPrefijo("x' OR 1=1 --")).toBe("x' or 1=1 --%");
+  });
+});
+
+describe("patronContiene", () => {
+  it("busca en cualquier parte: comodín al inicio y al final, en minúsculas", () => {
+    expect(patronContiene("  EON ")).toBe("%eon%");
+  });
+
+  it("escapa los comodines de LIKE y la barra invertida", () => {
+    expect(patronContiene("50%")).toBe("%50\\%%");
+    expect(patronContiene("a_b")).toBe("%a\\_b%");
+    expect(patronContiene("a\\b")).toBe("%a\\\\b%");
+  });
+
+  it("elimina el asterisco y deja literal una entrada con forma de inyección", () => {
+    expect(patronContiene("pi*ka")).toBe("%pika%");
+    expect(patronContiene("x' OR 1=1 --")).toBe("%x' or 1=1 --%");
   });
 });
 

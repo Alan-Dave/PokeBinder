@@ -10,7 +10,7 @@ import { cambiarEstadoCuentaSchema } from "@/lib/validators/cuentas";
  * Dos pasos, en este orden:
  *   1. cambiar_estado_cuenta, con la sesión de quien llama. La base decide si
  *      es un administrador habilitado y aplica las reglas (ver
- *      supabase/migrations/20261103120000_cuentas_habilitadas.sql). Desde ahí
+ *      supabase/migrations/20261110130000_cuentas_habilitadas.sql). Desde ahí
  *      RLS ya corta el acceso a la colección y los mazos.
  *   2. Supabase Auth, con la clave secreta: impide iniciar sesión y renovar
  *      el token. Nunca se llega aquí sin que el paso 1 haya autorizado.

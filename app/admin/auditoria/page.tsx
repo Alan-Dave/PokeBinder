@@ -47,20 +47,20 @@ export default async function AuditoriaPage({ searchParams }: Props) {
           defaultValue={accion ?? ""}
           maxLength={50}
           placeholder="cambio_rol"
-          className="rounded-md border border-zinc-400 px-2 py-1 text-sm"
+          className="rounded-xl border-[3px] border-tinta bg-white px-2 py-1 text-sm text-tinta"
         />
-        <button type="submit" className="rounded-md border border-zinc-400 px-3 py-1 text-sm">
+        <button type="submit" className="boton boton-neutro !rounded-xl !px-3 !py-1 text-sm">
           Filtrar
         </button>
       </form>
 
       {registros.length === 0 ? (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">No hay registros.</p>
+        <p className="text-sm text-tinta/75">No hay registros.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-zinc-300 dark:border-zinc-700">
+              <tr className="border-b-[3px] border-tinta">
                 <th className="py-2 pr-4">Fecha</th>
                 <th className="py-2 pr-4">Usuario</th>
                 <th className="py-2 pr-4">Acción</th>
@@ -71,7 +71,7 @@ export default async function AuditoriaPage({ searchParams }: Props) {
             </thead>
             <tbody>
               {registros.map((r) => (
-                <tr key={r.id} className="border-b border-zinc-200 align-top dark:border-zinc-800">
+                <tr key={r.id} className="border-b-2 border-tinta/20 align-top">
                   <td className="py-2 pr-4 whitespace-nowrap">{FORMATO_FECHA.format(new Date(r.ocurrido_en))}</td>
                   {/* Sin usuario_id significa un cambio hecho desde la consola de la base. */}
                   <td className="py-2 pr-4">{r.nombre_visible ?? (r.usuario_id ? "Usuario eliminado" : "Consola")}</td>

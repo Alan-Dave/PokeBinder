@@ -37,6 +37,8 @@ const MENSAJES: Record<string, string> = {
   "23505": "Esa carta y variante ya están en tu inventario. Edita la cantidad.",
   "23514": "Esa variante no existe para la carta, o la cantidad no es válida.",
   "23503": "La carta no existe.",
+  // Código propio de la migración binders_copias: la carta ocupa más casillas que la cantidad pedida.
+  PB002: "Esa carta está en más casillas de tus binders que la cantidad indicada. Quítala del binder antes de bajar la cantidad.",
   "42501": "No tienes permiso para realizar esta acción.",
 };
 
@@ -127,10 +129,15 @@ export async function listarInventario(
   const { supabase, user } = await usuarioActual();
   if (!user) return { ok: false, error: SIN_SESION };
 
-  const desde = (validado.data.pagina - 1) * TAMANO_PAGINA;
-  const { data, error, count } = await supabase
+  const { pagina, categoriaId } = validado.data;
+  const desde = (pagina - 1) * TAMANO_PAGINA;
+  const columnas = "id, carta_id, variante, cantidad, cartas(id_api, nombre, idioma)";
+  // !inner deja solo las filas con pertenencia a la categoría pedida. Si la
+  // categoría es de otro usuario, RLS la oculta y el resultado es vacío.
+  const consulta = supabase
     .from("inventario")
-    .select("id, carta_id, variante, cantidad, cartas(id_api, nombre, idioma)", { count: "exact" })
+    .select(categoriaId ? `${columnas}, categoria_cartas!inner(categoria_id)` : columnas, { count: "exact" });
+  const { data, error, count } = await (categoriaId ? consulta.eq("categoria_cartas.categoria_id", categoriaId) : consulta)
     .order("id")
     .range(desde, desde + TAMANO_PAGINA - 1);
 
