@@ -129,16 +129,17 @@ begin
   exception when insufficient_privilege then null;
   end;
 
-  -- 6. CARTAS EN EL MAZO O BINDER AJENO.
+  -- 6. CARTAS EN EL MAZO O BINDER AJENO. Un trigger puede responder "no existe"
+  -- (foreign_key_violation) porque RLS le oculta el mazo o binder de B: también es rechazo.
   begin
     insert into public.mazo_cartas (mazo_id, carta_id, cantidad) values (v_mazo_b, v_carta, 1);
     raise exception 'FALLO: A agregó cartas al mazo de B';
-  exception when insufficient_privilege then null;
+  exception when insufficient_privilege or foreign_key_violation then null;
   end;
   begin
     insert into public.binder_casillas (binder_id, pagina, posicion, inventario_id) values (v_binder_b, 1, 1, v_inv_a);
     raise exception 'FALLO: A puso una carta en el binder de B';
-  exception when insufficient_privilege then null;
+  exception when insufficient_privilege or foreign_key_violation then null;
   end;
   -- Y en su propio binder, una carta del inventario de B (para leerla por el join).
   begin
