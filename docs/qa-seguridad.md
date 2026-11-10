@@ -89,9 +89,16 @@ con la aplicación abierta y la consola del navegador y los logs del servidor a 
 
 1. **Dos cuentas normales:** que A no vea ni modifique inventario, mazos, binders ni
    reportes de B (probando también cambiando ids en la URL y en formularios).
-   La capa de base de datos se comprueba con `supabase/tests/aislamiento_entre_usuarios.test.sql`
-   (se pega en el SQL Editor; simula dos usuarios y termina en `ROLLBACK`). Falta
-   anotar aquí su resultado y hacer la prueba con dos cuentas reales en el navegador.
+   **Capa de base de datos: verificada el 10 de noviembre de 2026** con
+   `supabase/tests/aislamiento_entre_usuarios.test.sql` (se pega en el SQL Editor;
+   simula dos usuarios y un visitante y termina en `ROLLBACK`). Terminó sin errores
+   en Supabase: el usuario A no puede leer, modificar, borrar ni crear nada a nombre
+   de B en inventario, mazos, cartas de mazo, binders, casillas, reportes y perfiles;
+   no puede subirse el rol; la auditoría no es accesible por la API y un visitante sin
+   sesión no lee inventario ni mazos. El editor no muestra el aviso final (`NOTICE`),
+   pero cada comprobación es un `assert` o un `raise exception` que habría detenido la
+   ejecución. **Falta** la prueba con dos cuentas reales en el navegador (cambiando ids
+   en la URL y en formularios), que cubre también la capa de la aplicación.
 2. **Cuenta normal contra rutas de administración:** abrir `/admin/usuarios`,
    `/admin/auditoria` y `/admin/reportes` y confirmar que no muestran datos.
 3. **Consola del navegador:** recorrer todas las pantallas y confirmar que la CSP no
