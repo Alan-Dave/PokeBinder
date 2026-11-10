@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { eliminarAccion, guardarCantidadAccion } from "@/app/coleccion/acciones";
 import type { EstadoAccion } from "@/app/coleccion/tipos";
+import ImagenCarta from "@/components/ImagenCarta";
 import SelectorCategorias from "@/components/SelectorCategorias";
 import type { Categoria } from "@/lib/categorias";
 import type { FilaInventario } from "@/lib/inventario";
@@ -20,12 +21,14 @@ type Props = {
   max: number;
   // Precio unitario ya formateado, calculado en el servidor; null si no hay.
   precio?: string | null;
+  // Imagen firmada del bucket; null si la carta no tiene (entonces se prueba TCGdex).
+  imagenUrl?: string | null;
   // Categorías del usuario y las ids donde ya está esta fila (PBI-X7).
   categorias?: Categoria[];
   categoriasDeLaFila?: number[];
 };
 
-export default function FilaColeccion({ fila, min, max, precio, categorias = [], categoriasDeLaFila = [] }: Props) {
+export default function FilaColeccion({ fila, min, max, precio, imagenUrl = null, categorias = [], categoriasDeLaFila = [] }: Props) {
   const [estadoGuardar, guardar, guardando] = useActionState(guardarCantidadAccion, INICIAL);
   const [estadoEliminar, eliminar, eliminando] = useActionState(eliminarAccion, INICIAL);
   const [confirmando, setConfirmando] = useState(false);
@@ -36,7 +39,15 @@ export default function FilaColeccion({ fila, min, max, precio, categorias = [],
   return (
     <li className="tarjeta flex flex-col gap-2 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+        <div className="flex items-center gap-3">
+          <span className="flex aspect-[5/7] w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 border-tinta bg-[#e9e9ee]">
+            <ImagenCarta
+              url={imagenUrl}
+              urlRespaldo={`/api/cartas/${fila.carta_id}/imagen-hd?tam=min`}
+              alt={fila.cartas?.nombre ?? "Carta"}
+            />
+          </span>
+          <div>
           <p className="text-lg font-extrabold">{fila.cartas?.nombre ?? "Carta desconocida"}</p>
           <p className="text-sm font-bold text-tinta/75">
             {fila.cartas ? `${fila.cartas.id_api} · ${fila.cartas.idioma} · ` : ""}
@@ -45,6 +56,7 @@ export default function FilaColeccion({ fila, min, max, precio, categorias = [],
           <p className="text-sm font-bold text-tinta/75">
             {precio ? `Precio de mercado: ${precio} c/u` : "Sin precio disponible"}
           </p>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
