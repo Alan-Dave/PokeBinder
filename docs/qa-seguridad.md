@@ -89,6 +89,9 @@ con la aplicación abierta y la consola del navegador y los logs del servidor a 
 
 1. **Dos cuentas normales:** que A no vea ni modifique inventario, mazos, binders ni
    reportes de B (probando también cambiando ids en la URL y en formularios).
+   La capa de base de datos se comprueba con `supabase/tests/aislamiento_entre_usuarios.test.sql`
+   (se pega en el SQL Editor; simula dos usuarios y termina en `ROLLBACK`). Falta
+   anotar aquí su resultado y hacer la prueba con dos cuentas reales en el navegador.
 2. **Cuenta normal contra rutas de administración:** abrir `/admin/usuarios`,
    `/admin/auditoria` y `/admin/reportes` y confirmar que no muestran datos.
 3. **Consola del navegador:** recorrer todas las pantallas y confirmar que la CSP no
