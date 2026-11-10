@@ -74,4 +74,16 @@ describe("listarPerfiles", () => {
 
     expect(await listarPerfiles()).toEqual({ ok: false, error: "No tienes permiso para realizar esta acción." });
   });
+
+  it("oculta el detalle de un fallo inesperado", async () => {
+    base({ error: { code: "XX000" } });
+
+    expect(await listarPerfiles()).toEqual({ ok: false, error: "No se pudo completar la operación." });
+  });
+
+  it("trata un error sin código como inesperado", async () => {
+    base({ error: {} });
+
+    expect(await listarPerfiles()).toEqual({ ok: false, error: "No se pudo completar la operación." });
+  });
 });

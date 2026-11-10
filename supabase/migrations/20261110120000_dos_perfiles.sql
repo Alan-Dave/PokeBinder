@@ -13,7 +13,9 @@
 -- PostgreSQL no permite quitar valores de un enum, así que el tipo se
 -- reemplaza: se crea uno nuevo, se convierte la columna y se borra el viejo.
 -- Todo lo que depende del tipo o de la columna se recrea en este archivo:
--- asignar_rol, listar_perfiles y el trigger que audita los cambios de rol.
+-- asignar_rol, listar_perfiles, el trigger que audita los cambios de rol y
+-- las políticas de reportes_catalogo (20261105140000), que comparan el rol
+-- con 'superusuario'.
 -- listar_auditoria no usa el tipo, solo compara el valor; se reemplaza con
 -- create or replace y conserva sus privilegios.
 --
@@ -32,6 +34,10 @@ drop trigger perfiles_audita_rol on public.perfiles;
 -- Sus firmas usan public.rol_usuario. Se recrean más abajo.
 drop function public.asignar_rol(uuid, public.rol_usuario);
 drop function public.listar_perfiles();
+
+-- Una columna no puede cambiar de tipo mientras una política la nombre.
+drop policy "cada usuario ve sus reportes y los administradores todos" on public.reportes_catalogo;
+drop policy "los administradores gestionan el estado de los reportes" on public.reportes_catalogo;
 
 
 -- ---------------------------------------------------------------------------
@@ -85,6 +91,33 @@ create trigger perfiles_audita_rol
   for each row
   when (old.rol is distinct from new.rol)
   execute function privado.auditar_cambio_rol();
+
+
+-- ---------------------------------------------------------------------------
+-- 3b. Políticas de reportes_catalogo, ahora solo con administrador
+-- ---------------------------------------------------------------------------
+
+-- Mismo texto que en 20261105140000_reportes_catalogo, sin 'superusuario'.
+create policy "cada usuario ve sus reportes y los administradores todos"
+  on public.reportes_catalogo for select to authenticated
+  using (
+    (select auth.uid()) = usuario_id
+    or exists (
+      select 1 from public.perfiles p
+      where p.id = (select auth.uid()) and p.rol = 'administrador'
+    )
+  );
+
+create policy "los administradores gestionan el estado de los reportes"
+  on public.reportes_catalogo for update to authenticated
+  using (exists (
+    select 1 from public.perfiles p
+    where p.id = (select auth.uid()) and p.rol = 'administrador'
+  ))
+  with check (exists (
+    select 1 from public.perfiles p
+    where p.id = (select auth.uid()) and p.rol = 'administrador'
+  ));
 
 
 -- ---------------------------------------------------------------------------
