@@ -1,47 +1,43 @@
-# PBI-19 (AB#62): validación de legalidad por formato — pendiente
+# PBI-19 (AB#62): validación de legalidad por formato
 
-## Qué pedía la tarjeta
+## Estado: implementado
 
-El título del backlog es "Validación de legalidad por formato" (por ejemplo,
-que una carta o un set sean legales en el formato competitivo Standard o
-Expanded). No hay un documento de requerimientos más detallado en el repo:
-el título es toda la especificación formal disponible.
+La tarjeta pedía marcar si un mazo es legal en el formato elegido (RF-08). Estuvo
+bloqueada porque el catálogo migrado (`PokeDatabase.db`) no trae ningún dato de
+legalidad por set o formato, y inventarlo habría sido peor que no tener la
+función.
 
-## Por qué no se implementó
+El bloqueo se resolvió con una fuente real que el proyecto ya usa para las
+imágenes en alta definición: **TCGdex** informa en cada carta el campo
+`legal: { standard, expanded }` (además de `regulationMark`).
 
-Para validar legalidad hace falta saber, para cada set, en qué formato(s) es
-legal y desde/hasta cuándo (los formatos rotan: un set deja de ser legal en
-Standard después de cierto tiempo). **Esa información no existe en el
-catálogo migrado.**
+## Cómo funciona
 
-Se revisó:
+- `/mazos/[id]` tiene un selector de formato (Standard o Expanded). Solo al
+  elegirlo se consulta a TCGdex.
+- `lib/legalidad-mazo.ts` pide la legalidad de cada carta distinta del mazo
+  (como máximo 100) y la recuerda en memoria 24 horas (un fallo, 1 minuto).
+  No se guarda en la base: los formatos rotan y no hay migración que mantener.
+- `lib/legalidad.ts` (lógica pura) decide el veredicto:
+  - **Legal:** TCGdex confirmó todas las cartas.
+  - **No legal:** al menos una carta no está permitida; se listan.
+  - **No verificable:** alguna carta no tiene información. Nunca se muestra
+    como legal.
+- A TCGdex solo viaja el `id_api` de cada carta (identificador público del
+  catálogo). Se reutilizan las defensas de `lib/tcgdex.ts`: host fijo, sin
+  redirecciones, tiempo y tamaño máximos y respuesta validada con zod.
 
-- `supabase/migrations/20260926213011_catalogo.sql`: ni `cartas` ni `sets`
-  tienen una columna de formato, legalidad o rotación.
-- `ingesta/migrar_catalogo.py`: el `Carta` de origen (desde
-  `PokeDatabase.db`) tampoco trae ese dato — no se perdió en la migración,
-  nunca estuvo en el origen.
+## Límites conocidos
 
-Agregar una tabla de legalidad con datos inventados o de memoria violaría la
-misma regla que ya aplicamos en otros lados del proyecto: no fabricar datos
-que se presenten como reales. Una tabla así, mal alimentada, sería peor que
-no tener la función: le diría a un usuario que su mazo es legal cuando no lo
-es, o al revés.
-
-## Qué se necesitaría para implementarlo
-
-1. Una fuente de datos de legalidad por set y formato (por ejemplo, el mismo
-   tipo de fuente que ya usa la app oficial de Pokémon TCG Live, o el
-   histórico de rotaciones publicado por Play! Pokémon).
-2. Una tabla nueva, por ejemplo `formatos_legalidad (set_id, idioma, formato,
-   legal_desde, legal_hasta)`, cargada por un script de ingesta separado
-   (siguiendo el estilo de `ingesta/migrar_catalogo.py`), no a mano.
-3. Recién con eso, una función de validación análoga a
-   `lib/mazos.ts` (PBI-17): dado un mazo y un formato, qué cartas no son
-   legales.
-
-## Qué sigue
-
-Mientras no se resuelva el punto 1 (de dónde sale el dato), esta tarjeta no
-se puede programar sin inventar información. Queda para cuando el equipo
-decida una fuente concreta.
+- Solo Standard y Expanded, los formatos que TCGdex informa por carta.
+- El chino (`zh`) no existe en TCGdex: esas cartas se buscan en inglés con el
+  mismo `id_api` y, si no aparecen, quedan como no verificables.
+- Los id de otros idiomas no siempre coinciden con el nuestro (el japonés usa
+  `PMCG1` donde nosotros `base1`): se prueba el idioma de la carta y luego el
+  inglés.
+- Si TCGdex no responde, el veredicto es «no verificable», no «legal».
+- La caché vive en la memoria del servidor: se vacía al reiniciar.
+- Es legalidad por carta. Reglas del mazo como el máximo de copias las valida
+  `lib/reglas-mazo.ts` (PBI-16).
+- No se probó contra TCGdex real desde la aplicación; las pruebas usan
+  respuestas simuladas.

@@ -29,7 +29,7 @@ distinción, para el estado actual del proyecto (PBI-03, 04, 07 y 08).
 
 | Dato | Dónde vive | Nivel | Resguardo actual |
 |---|---|---|---|
-| `SUPABASE_SECRET_KEY` | Variable de entorno del servidor | Secreto técnico | Nunca en `NEXT_PUBLIC_*`; `parseServerEnv` ([env.ts](../lib/validators/env.ts)) rechaza el arranque si no es una clave secreta real. Solo la usa [`admin.ts`](../lib/supabase/admin.ts), y solo para dos cosas: firmar URLs de Storage ([`imagenes.ts`](../lib/imagenes.ts)) y bloquear o desbloquear una cuenta en Supabase Auth ([`cuentas.ts`](../lib/cuentas.ts)), siempre después de que la base autorizó al administrador. Nunca para leer tablas. |
+| `SUPABASE_SECRET_KEY` | Variable de entorno del servidor | Secreto técnico | Nunca en `NEXT_PUBLIC_*`; `parseServerEnv` ([env.ts](../lib/validators/env.ts)) rechaza el arranque si no es una clave secreta real. Solo la usa [`admin.ts`](../lib/supabase/admin.ts), y solo para tres cosas: firmar URLs de Storage ([`imagenes.ts`](../lib/imagenes.ts)), escribir `precios_historial` (ver abajo) y bloquear o desbloquear una cuenta en Supabase Auth ([`cuentas.ts`](../lib/cuentas.ts)), siempre después de que la base autorizó al administrador. Nunca para leer tablas de datos de usuario. |
 | `MAILERSEND_API_KEY` | Variable de entorno del servidor (opcional) | Secreto técnico | Sin `NEXT_PUBLIC_`; solo la lee [`correo.ts`](../lib/correo.ts). Si falta, los avisos por correo quedan desactivados y la app funciona igual; si está a medias con `CORREO_REMITENTE`, la app no arranca. Nunca se registra en el log. |
 | Contraseña de conexión a Postgres (`SUPABASE_DB_URL`) | Variable de entorno de los scripts de `/ingesta` | Secreto técnico | Nunca en el string de conexión ni en el historial de la terminal: los scripts la piden con `getpass`, que no la muestra en pantalla. |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Variable de entorno pública, bundle del navegador | — (no es secreta) | Inofensiva porque RLS limita lo que permite hacer. `esClaveSecreta` impide que alguien pegue ahí la clave secreta por error. |
@@ -55,6 +55,8 @@ proyecto; ninguna quedó sin RLS.
 | `inventario` | Activa | `for all`, restringida a `usuario_id = auth.uid()` | Ambos |
 | `mazos` | Activa | `for all`, restringida a `usuario_id = auth.uid()` | Ambos |
 | `mazo_cartas` | Activa | `for all`, vía subconsulta a `mazos` (el mazo debe ser del usuario) | Ambos |
+| `binders` | Activa | `for all`, restringida a `usuario_id = auth.uid()` ([`binders.sql`](../supabase/migrations/20261102120000_binders.sql)) | Ambos. La cuadrícula (2x2, 3x3, 3x4, 4x4) y las páginas (1 a 100) las limita un `check` |
+| `binder_casillas` | Activa | `for all`, vía subconsulta a `binders` (el binder debe ser del usuario) | Ambos. El `with check` exige además que la carta sea de **su** `inventario`; sin eso se podría colocar la fila de inventario de otro. Un trigger valida que la casilla quepa en la cuadrícula y en las páginas |
 | `auditoria` | Activa | Ninguna política, para ningún comando | Más estricto que la regla: ni siquiera se intenta permitir un caso. Solo escriben funciones `security definer` |
 
 **Por qué las políticas de solo lectura no llevan `with check`:** `with check`
@@ -68,7 +70,12 @@ las que hay en el proyecto (`perfiles.update`, `inventario`, `mazos`,
 no tiene ninguna política para ellos ([`buckets_storage.sql`](../supabase/migrations/20260927120000_buckets_storage.sql)).
 Ni `anon` ni `authenticated` pueden leer, subir ni borrar un archivo. Solo
 `service_role` opera sobre ellos, y en el código eso queda acotado a firmar
-URLs ([`admin.ts`](../lib/supabase/admin.ts)) — nunca a leer o escribir tablas.
+URLs ([`admin.ts`](../lib/supabase/admin.ts)), con una única excepción documentada:
+`lib/historial-precios.ts` escribe `precios_historial`. Esa tabla no tiene política
+de escritura para los usuarios, porque si pudieran insertar falsearían los precios
+que ven los demás; solo el servidor la escribe, con datos ya validados de TCGdex.
+La regla de Semgrep `pokebinder-cliente-admin-acotado` lista exactamente esos dos
+archivos: un uso nuevo del cliente admin hace fallar el pipeline hasta justificarlo aquí.
 
 **Funciones con control de rol propio:** `asignar_rol` y `listar_perfiles`
 ([`asignar_roles.sql`](../supabase/migrations/20260928020000_asignar_roles.sql))
@@ -79,7 +86,7 @@ contra el proyecto remoto (seis casos: autoascenso, degradar a otro sin ser
 superusuario, autodegradación, asignación válida con su registro en
 auditoría, `listar_perfiles` con y sin el rol, y sin sesión).
 
-**Dos perfiles (migración `20261102120000_dos_perfiles`):** el enum `rol_usuario`
+**Dos perfiles (migración `20261110120000_dos_perfiles`):** el enum `rol_usuario`
 queda con `administrador` y `usuario`; `superusuario` pasó a `administrador` y
 `usuario_normal` a `usuario`. Las tres funciones con control de rol
 (`asignar_rol`, `listar_perfiles`, `listar_auditoria`) exigen `administrador`.
@@ -89,14 +96,15 @@ rechazo a `usuario` y a `anon`, autocambio, sin sesión y auditoría); falta
 repetir la prueba contra el proyecto remoto. En una base nueva no queda ningún
 administrador: el primero se asigna desde la consola de Supabase.
 
-**Cuentas habilitadas (migración `20261103120000_cuentas_habilitadas`):** un
+**Cuentas habilitadas (migración `20261110130000_cuentas_habilitadas`):** un
 administrador deshabilita o habilita una cuenta desde `/admin/cuentas` con un
 motivo obligatorio. `cambiar_estado_cuenta` autoriza en la base (administrador
 habilitado, nunca la propia cuenta, nunca el último administrador habilitado)
 y registra el motivo en la bitácora; recién entonces [`cuentas.ts`](../lib/cuentas.ts)
 bloquea la cuenta en Supabase Auth, y si eso falla revierte la base. Como el
 token ya emitido sigue vigente hasta que vence, las políticas de `perfiles`
-(edición), `inventario`, `mazos` y `mazo_cartas` exigen además
+(edición), `inventario`, `mazos`, `mazo_cartas`, `binders`, `binder_casillas`,
+`categorias_coleccion`, `categoria_cartas` y `reportes_catalogo` exigen además
 `cuenta_habilitada()`. Un administrador deshabilitado pierde Administración.
 Probado contra un PostgreSQL 16 local; falta repetirlo contra el proyecto
 remoto, igual que la migración de dos perfiles.

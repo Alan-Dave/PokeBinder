@@ -44,6 +44,12 @@ export const listarInventarioSchema = z.object({
     .int({ error: "La página debe ser un número entero." })
     .min(1, { error: "La página mínima es 1." })
     .default(1),
+  // Solo las cartas de una categoría de la colección (PBI-X7).
+  categoriaId: z
+    .number({ error: "La categoría no es válida." })
+    .int({ error: "La categoría no es válida." })
+    .positive({ error: "La categoría no es válida." })
+    .optional(),
 });
 
 export type AgregarAlInventarioInput = z.infer<typeof agregarAlInventarioSchema>;

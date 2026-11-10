@@ -90,6 +90,95 @@ create policy "cada usuario gestiona las cartas de sus mazos"
   ));
 
 
+-- Tablas de datos de usuario que llegaron después (binders, categorías y
+-- reportes del catálogo): las mismas políticas que en su migración, más la
+-- cuenta habilitada. precios_historial no se toca: son datos públicos del
+-- mercado, no de la persona.
+
+drop policy "cada usuario gestiona sus binders" on public.binders;
+create policy "cada usuario gestiona sus binders"
+  on public.binders for all to authenticated
+  using ((select auth.uid()) = usuario_id and (select public.cuenta_habilitada()))
+  with check ((select auth.uid()) = usuario_id and (select public.cuenta_habilitada()));
+
+drop policy "cada usuario gestiona las casillas de sus binders" on public.binder_casillas;
+create policy "cada usuario gestiona las casillas de sus binders"
+  on public.binder_casillas for all to authenticated
+  using ((select public.cuenta_habilitada()) and exists (
+    select 1 from public.binders b
+    where b.id = binder_id and b.usuario_id = (select auth.uid())
+  ))
+  with check (
+    (select public.cuenta_habilitada())
+    and exists (
+      select 1 from public.binders b
+      where b.id = binder_id and b.usuario_id = (select auth.uid())
+    )
+    and exists (
+      select 1 from public.inventario i
+      where i.id = inventario_id and i.usuario_id = (select auth.uid())
+    )
+  );
+
+drop policy "cada usuario gestiona sus categorías" on public.categorias_coleccion;
+create policy "cada usuario gestiona sus categorías"
+  on public.categorias_coleccion for all to authenticated
+  using ((select auth.uid()) = usuario_id and (select public.cuenta_habilitada()))
+  with check ((select auth.uid()) = usuario_id and (select public.cuenta_habilitada()));
+
+drop policy "cada usuario gestiona las cartas de sus categorías" on public.categoria_cartas;
+create policy "cada usuario gestiona las cartas de sus categorías"
+  on public.categoria_cartas for all to authenticated
+  using ((select public.cuenta_habilitada()) and exists (
+    select 1 from public.categorias_coleccion c
+    where c.id = categoria_id and c.usuario_id = (select auth.uid())
+  ))
+  with check (
+    (select public.cuenta_habilitada())
+    and exists (
+      select 1 from public.categorias_coleccion c
+      where c.id = categoria_id and c.usuario_id = (select auth.uid())
+    )
+    and exists (
+      select 1 from public.inventario i
+      where i.id = inventario_id and i.usuario_id = (select auth.uid())
+    )
+  );
+
+-- Reportes: crear y ver los propios exige la cuenta habilitada; revisarlos,
+-- un administrador con la cuenta habilitada (como el resto de Administración).
+drop policy "cada usuario crea reportes a su nombre" on public.reportes_catalogo;
+create policy "cada usuario crea reportes a su nombre"
+  on public.reportes_catalogo for insert to authenticated
+  with check ((select auth.uid()) = usuario_id and estado = 'abierto' and (select public.cuenta_habilitada()));
+
+drop policy "cada usuario ve sus reportes y los administradores todos" on public.reportes_catalogo;
+create policy "cada usuario ve sus reportes y los administradores todos"
+  on public.reportes_catalogo for select to authenticated
+  using (
+    (select public.cuenta_habilitada())
+    and (
+      (select auth.uid()) = usuario_id
+      or exists (
+        select 1 from public.perfiles p
+        where p.id = (select auth.uid()) and p.rol = 'administrador'
+      )
+    )
+  );
+
+drop policy "los administradores gestionan el estado de los reportes" on public.reportes_catalogo;
+create policy "los administradores gestionan el estado de los reportes"
+  on public.reportes_catalogo for update to authenticated
+  using ((select public.cuenta_habilitada()) and exists (
+    select 1 from public.perfiles p
+    where p.id = (select auth.uid()) and p.rol = 'administrador'
+  ))
+  with check ((select public.cuenta_habilitada()) and exists (
+    select 1 from public.perfiles p
+    where p.id = (select auth.uid()) and p.rol = 'administrador'
+  ));
+
+
 -- ---------------------------------------------------------------------------
 -- 3. Cambiar el estado de una cuenta
 -- ---------------------------------------------------------------------------
@@ -197,7 +286,7 @@ grant execute on function public.cambiar_estado_cuenta(uuid, boolean, text) to a
 -- 4. Un administrador deshabilitado pierde Administración
 -- ---------------------------------------------------------------------------
 
--- Las tres funciones de 20261102120000_dos_perfiles exigían solo el rol. Ahora
+-- Las tres funciones de 20261110120000_dos_perfiles exigían solo el rol. Ahora
 -- además la cuenta habilitada, y la regla de "al menos un administrador"
 -- cuenta solo a los habilitados.
 

@@ -45,5 +45,53 @@ export const loginSchema = z.object({
     .max(CONTRASENA_MAX, { error: "Correo o contraseña incorrectos." }),
 });
 
+// Recuperación: solo el correo. La respuesta no depende de si la cuenta existe.
+export const recuperarSchema = z.object({ correo });
+
+// Origen desde el que se pidió la recuperación (cabecera Origin de la Server
+// Action). Solo se acepta http(s); de él solo se usa el origen (sin ruta) para armar el enlace del correo.
+export const origenSchema = z
+  .string({ error: "Falta el origen de la solicitud." })
+  .max(200)
+  .refine(
+    (valor) => {
+      try {
+        return /^https?:$/.test(new URL(valor).protocol);
+      } catch {
+        return false;
+      }
+    },
+    { error: "El origen no es válido." },
+  );
+
+export const restablecerSchema = z
+  .object({
+    contrasena: contrasenaNueva,
+    confirmacion: z
+      .string({ error: "Repite la contraseña." })
+      .max(CONTRASENA_MAX, { error: "Las contraseñas no coinciden." }),
+  })
+  .refine((v) => v.contrasena === v.confirmacion, { path: ["confirmacion"], error: "Las contraseñas no coinciden." });
+
+export const cambiarContrasenaSchema = z
+  .object({
+    contrasenaActual: z
+      .string({ error: "Ingresa tu contraseña actual." })
+      .min(1, { error: "Ingresa tu contraseña actual." })
+      .max(CONTRASENA_MAX, { error: "La contraseña actual no es correcta." }),
+    contrasena: contrasenaNueva,
+    confirmacion: z
+      .string({ error: "Repite la contraseña." })
+      .max(CONTRASENA_MAX, { error: "Las contraseñas no coinciden." }),
+  })
+  .refine((v) => v.contrasena === v.confirmacion, { path: ["confirmacion"], error: "Las contraseñas no coinciden." })
+  .refine((v) => v.contrasena !== v.contrasenaActual, {
+    path: ["contrasena"],
+    error: "La contraseña nueva debe ser distinta de la actual.",
+  });
+
+// El código que Supabase agrega al enlace del correo (PKCE).
+export const codigoRecuperacionSchema = z.string({ error: "Falta el código." }).min(8).max(512);
+
 export type RegistroInput = z.infer<typeof registroSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

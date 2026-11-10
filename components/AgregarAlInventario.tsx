@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { agregarCartaAccion } from "@/app/catalogo/acciones";
 import type { EstadoAccion } from "@/app/coleccion/tipos";
+import { etiquetaVariante, ordenarVariantes } from "@/lib/variantes";
 
 const INICIAL: EstadoAccion = { error: null, exito: false };
 
@@ -12,15 +13,18 @@ type Props = {
   // Los límites vienen de la página (servidor) para no cargar zod en el navegador.
   min: number;
   max: number;
+  // Categorías del usuario para guardar la carta al agregarla (PBI-X8).
+  categorias?: Array<{ id: number; nombre: string }>;
 };
 
-export default function AgregarAlInventario({ cartaId, variantes, min, max }: Props) {
+export default function AgregarAlInventario({ cartaId, variantes, min, max, categorias = [] }: Props) {
   const [estado, agregar, agregando] = useActionState(agregarCartaAccion, INICIAL);
   const idVariante = `variante-${cartaId}`;
   const idCantidad = `cantidad-${cartaId}`;
+  const idCategoria = `categoria-${cartaId}`;
 
   if (variantes.length === 0) {
-    return <p className="text-sm text-zinc-600 dark:text-zinc-400">Sin variantes disponibles.</p>;
+    return <p className="text-sm font-bold">Sin variantes disponibles.</p>;
   }
 
   return (
@@ -33,11 +37,11 @@ export default function AgregarAlInventario({ cartaId, variantes, min, max }: Pr
         <select
           id={idVariante}
           name="variante"
-          className="rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
+          className="rounded-xl border-[3px] border-tinta bg-white px-2 py-1.5 text-sm font-bold"
         >
-          {variantes.map((variante) => (
+          {ordenarVariantes(variantes).map((variante) => (
             <option key={variante} value={variante}>
-              {variante}
+              {etiquetaVariante(variante)}
             </option>
           ))}
         </select>
@@ -54,23 +58,43 @@ export default function AgregarAlInventario({ cartaId, variantes, min, max }: Pr
           step={1}
           defaultValue={1}
           required
-          className="w-20 rounded-md border border-zinc-300 bg-transparent px-2 py-1.5 text-sm dark:border-zinc-700"
+          className="w-20 rounded-xl border-[3px] border-tinta bg-white px-2 py-1.5 text-sm font-bold"
         />
         <button
           type="submit"
           disabled={agregando}
-          className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          className="boton boton-azul !rounded-xl !px-4 !py-1.5 text-sm disabled:opacity-50"
         >
           {agregando ? "Agregando…" : "Agregar"}
         </button>
       </div>
+      {categorias.length > 0 && (
+        <div className="flex items-center gap-2">
+          <label htmlFor={idCategoria} className="text-sm font-bold">
+            Guardar en
+          </label>
+          <select
+            id={idCategoria}
+            name="categoriaId"
+            defaultValue=""
+            className="min-w-0 flex-1 rounded-xl border-[3px] border-tinta bg-white px-2 py-1.5 text-sm font-bold"
+          >
+            <option value="">Sin categoría</option>
+            {categorias.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       {estado.error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="text-sm font-bold text-[#b42318]">
           {estado.error}
         </p>
       )}
       {estado.exito && !estado.error && (
-        <p role="status" className="text-sm text-green-800 dark:text-green-400">
+        <p role="status" className="text-sm font-bold text-precio">
           Agregada a tu colección.
         </p>
       )}

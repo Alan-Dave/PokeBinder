@@ -1,10 +1,15 @@
 import "server-only";
 
+import type { LegalidadCarta } from "@/lib/legalidad";
+import { extraerCardmarket, extraerPrecios, type PreciosCarta } from "@/lib/precios";
+import { respuestaLegalidadTcgdexSchema } from "@/lib/validators/legalidad";
 import {
   idApiSchema,
   respuestaCartaTcgdexSchema,
   type IdiomaTcgdex,
+  type TamanoImagen,
 } from "@/lib/validators/imagen-hd";
+import { respuestaPreciosTcgdexSchema } from "@/lib/validators/precios";
 
 /**
  * Cliente mínimo de TCGdex (PBI-x2).
@@ -23,7 +28,8 @@ export const HOST_IMAGENES = "assets.tcgdex.net";
 
 export const TIEMPO_MAXIMO_MS = 12_000;
 export const BYTES_MAXIMOS_JSON = 64 * 1024;
-// high.webp pesa ~80 KB; el tope deja margen sin permitir descargas enormes.
+// high.webp pesa ~65 KB y low.webp ~18 KB; el tope deja margen sin permitir
+// descargas enormes.
 export const BYTES_MAXIMOS_IMAGEN = 1024 * 1024;
 
 export function urlCarta(idioma: IdiomaTcgdex, idApi: string): string | null {
@@ -36,10 +42,10 @@ const RUTA_IMAGEN = /^\/[a-z]{2}\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\/[A-Za-z0-9._
 
 /**
  * Valida la URL base que TCGdex devuelve en "image" y arma la de la imagen
- * grande. Devuelve null si algo no cuadra: es mejor no mostrar la imagen en
+ * grande ("hd") o la miniatura ("min"). Devuelve null si algo no cuadra: es mejor no mostrar la imagen en
  * alta definición que pedir una URL que no controlamos.
  */
-export function urlImagenAltaDefinicion(base: string): string | null {
+export function urlImagenAltaDefinicion(base: string, tamano: TamanoImagen = "hd"): string | null {
   let url: URL;
   try {
     url = new URL(base);
@@ -51,14 +57,13 @@ export function urlImagenAltaDefinicion(base: string): string | null {
   if (url.port !== "" || url.username !== "" || url.password !== "") return null;
   if (url.search !== "" || url.hash !== "") return null;
   if (!RUTA_IMAGEN.test(url.pathname) || url.pathname.includes("..")) return null;
-  return `https://${HOST_IMAGENES}${url.pathname}/high.webp`;
+  return `https://${HOST_IMAGENES}${url.pathname}/${tamano === "min" ? "low" : "high"}.webp`;
 }
 
 // "RIFF" + 4 bytes de tamaño + "WEBP".
 export function esWebp(bytes: Uint8Array): boolean {
   if (bytes.length < 12) return false;
-  const texto = (desde: number, hasta: number) =>
-    String.fromCharCode(...bytes.subarray(desde, hasta));
+  const texto = (desde: number, hasta: number) => String.fromCharCode(...bytes.subarray(desde, hasta));
   return texto(0, 4) === "RIFF" && texto(8, 12) === "WEBP";
 }
 
@@ -113,6 +118,7 @@ async function pedir(url: string, maximo: number): Promise<Uint8Array | null> {
 export async function descargarImagenAltaDefinicion(
   idioma: IdiomaTcgdex,
   idApi: string,
+  tamano: TamanoImagen = "hd",
 ): Promise<Uint8Array | null> {
   const urlDeLaCarta = urlCarta(idioma, idApi);
   if (!urlDeLaCarta) return null;
@@ -129,10 +135,66 @@ export async function descargarImagenAltaDefinicion(
   const carta = respuestaCartaTcgdexSchema.safeParse(datos);
   if (!carta.success || !carta.data.image) return null;
 
-  const urlImagen = urlImagenAltaDefinicion(carta.data.image);
+  const urlImagen = urlImagenAltaDefinicion(carta.data.image, tamano);
   if (!urlImagen) return null;
 
   const imagen = await pedir(urlImagen, BYTES_MAXIMOS_IMAGEN);
   if (!imagen || !esWebp(imagen)) return null;
   return imagen;
+}
+
+/**
+ * Descarga y decodifica el JSON de una carta de TCGdex. Devuelve null si el
+ * identificador no es válido, la carta no existe o la respuesta no es JSON.
+ */
+async function pedirCartaJson(idioma: IdiomaTcgdex, idApi: string): Promise<unknown | null> {
+  const url = urlCarta(idioma, idApi);
+  if (!url) return null;
+
+  const json = await pedir(url, BYTES_MAXIMOS_JSON);
+  if (!json) return null;
+
+  try {
+    return JSON.parse(new TextDecoder().decode(json));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Pide a TCGdex el precio de mercado (TCGplayer, USD) de una carta. Devuelve
+ * null si la carta no existe en ese idioma, la respuesta no es válida o no hay
+ * precio: quien llama muestra "sin precio disponible", nunca 0.
+ */
+export async function descargarPrecios(idioma: IdiomaTcgdex, idApi: string): Promise<PreciosCarta | null> {
+  const datos = await pedirCartaJson(idioma, idApi);
+  if (datos === null) return null;
+  const carta = respuestaPreciosTcgdexSchema.safeParse(datos);
+  if (!carta.success) return null;
+  const tcgplayer = extraerPrecios(carta.data.pricing?.tcgplayer);
+  const cardmarket = extraerCardmarket(carta.data.pricing?.cardmarket);
+  if (!tcgplayer && !cardmarket) return null;
+  return {
+    moneda: "USD",
+    actualizado: tcgplayer?.actualizado ?? null,
+    acabados: tcgplayer?.acabados ?? [],
+    cardmarket,
+  };
+}
+
+/**
+ * Pide a TCGdex la legalidad de una carta (campo "legal"). Devuelve null si la
+ * carta no existe en ese idioma, la respuesta no es válida o TCGdex no informó
+ * ningún formato: quien llama lo trata como «no verificable», nunca como legal.
+ */
+export async function descargarLegalidad(idioma: IdiomaTcgdex, idApi: string): Promise<LegalidadCarta | null> {
+  const datos = await pedirCartaJson(idioma, idApi);
+  if (datos === null) return null;
+  const carta = respuestaLegalidadTcgdexSchema.safeParse(datos);
+  if (!carta.success) return null;
+
+  const standard = carta.data.legal?.standard ?? null;
+  const expanded = carta.data.legal?.expanded ?? null;
+  if (standard === null && expanded === null) return null;
+  return { standard, expanded };
 }
