@@ -16,7 +16,7 @@ import {
  * Propuestas de imagen, descripción y detalles para el catálogo.
  *
  * La autorización vive en las funciones SQL (ver
- * supabase/migrations/20261104120000_propuestas_carta.sql), con la sesión de
+ * supabase/migrations/20261110140000_propuestas_carta.sql), con la sesión de
  * quien llama. La clave secreta solo mueve archivos en buckets privados y
  * busca la dirección para avisar, y siempre después de que la base aceptó la
  * acción (o, al subir, después de comprobar la sesión).

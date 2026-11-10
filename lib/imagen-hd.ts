@@ -10,7 +10,9 @@ import {
   esIdiomaTcgdex,
   idApiSchema,
   idCartaImagenSchema,
+  tamanoImagenSchema,
   type IdiomaTcgdex,
+  type TamanoImagen,
 } from "@/lib/validators/imagen-hd";
 
 /**
@@ -40,8 +42,8 @@ const enCurso = new Map<string, Promise<Uint8Array | null>>();
  * Nombre de archivo derivado de un hash: aunque el id_api trajera algo raro,
  * el nombre solo tiene hexadecimales y nunca puede salirse de la carpeta.
  */
-export function rutaCache(idioma: IdiomaTcgdex, idApi: string): string {
-  const hash = createHash("sha256").update(`${idioma}|${idApi}`).digest("hex");
+export function rutaCache(idioma: IdiomaTcgdex, idApi: string, tamano: TamanoImagen = "hd"): string {
+  const hash = createHash("sha256").update(`${idioma}|${idApi}|${tamano}`).digest("hex");
   return path.join(CARPETA_CACHE, `${hash}.webp`);
 }
 
@@ -68,17 +70,17 @@ async function guardarCache(ruta: string, bytes: Uint8Array): Promise<void> {
   }
 }
 
-async function obtenerDeIdioma(idioma: IdiomaTcgdex, idApi: string): Promise<Uint8Array | null> {
-  const ruta = rutaCache(idioma, idApi);
+async function obtenerDeIdioma(idioma: IdiomaTcgdex, idApi: string, tamano: TamanoImagen): Promise<Uint8Array | null> {
+  const ruta = rutaCache(idioma, idApi, tamano);
   const guardada = await leerCache(ruta);
   if (guardada) return guardada;
 
-  const clave = `${idioma}|${idApi}`;
+  const clave = `${idioma}|${idApi}|${tamano}`;
   const existente = enCurso.get(clave);
   if (existente) return existente;
 
   const descarga = (async () => {
-    const bytes = await descargarImagenAltaDefinicion(idioma, idApi);
+    const bytes = await descargarImagenAltaDefinicion(idioma, idApi, tamano);
     if (bytes) await guardarCache(ruta, bytes);
     return bytes;
   })().finally(() => enCurso.delete(clave));
@@ -92,28 +94,27 @@ export function idiomasAProbar(idiomaCarta: string): IdiomaTcgdex[] {
 }
 
 /**
- * Devuelve la imagen grande de la carta `idCarta`, o null si el id no es
- * válido, la carta no existe o TCGdex no la tiene.
+ * Devuelve la imagen de la carta `idCarta` en el tamaño pedido ("hd" por
+ * defecto, "min" para la miniatura del catálogo), o null si el id o el tamaño
+ * no son válidos, la carta no existe o TCGdex no la tiene.
  */
-export async function obtenerImagenHd(idCarta: unknown): Promise<ImagenHd | null> {
+export async function obtenerImagenHd(idCarta: unknown, tamano: unknown = undefined): Promise<ImagenHd | null> {
   const id = idCartaImagenSchema.safeParse(idCarta);
   if (!id.success) return null;
+  const tam = tamanoImagenSchema.safeParse(tamano);
+  if (!tam.success) return null;
 
   // Lectura pública del catálogo, con RLS y sin clave secreta. Se pide solo
   // lo necesario y el id viaja como parámetro (regla 5).
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("cartas")
-    .select("id_api, idioma")
-    .eq("id", id.data)
-    .maybeSingle();
+  const { data, error } = await supabase.from("cartas").select("id_api, idioma").eq("id", id.data).maybeSingle();
   if (error || !data) return null;
 
   const idApi = idApiSchema.safeParse(data.id_api);
   if (!idApi.success) return null;
 
   for (const idioma of idiomasAProbar(data.idioma)) {
-    const bytes = await obtenerDeIdioma(idioma, idApi.data);
+    const bytes = await obtenerDeIdioma(idioma, idApi.data, tam.data);
     if (bytes) return { bytes };
   }
   return null;

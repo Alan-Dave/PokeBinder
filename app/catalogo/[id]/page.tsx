@@ -1,14 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AgregarAlInventario from "@/components/AgregarAlInventario";
+import ComparadorPrecios from "@/components/ComparadorPrecios";
 import FormularioPropuesta from "@/components/FormularioPropuesta";
+import ReportarError from "@/components/ReportarError";
 import VisorImagen from "@/components/VisorImagen";
 import { obtenerPerfilActual } from "@/lib/auth";
+import { listarCategorias } from "@/lib/categorias";
 import { obtenerCarta, urlsImagenesOpcionales } from "@/lib/catalogo";
+import { registrarPrecios } from "@/lib/historial-precios";
+import { obtenerPreciosCartas } from "@/lib/precios-carta";
 import { misPropuestas } from "@/lib/propuestas";
+import { describirVariantes } from "@/lib/variantes";
 import { idDesdeRuta } from "@/lib/validators/catalogo";
 import { CANTIDAD_MAX, CANTIDAD_MIN } from "@/lib/validators/inventario";
 import { DESCRIPCION_MAX, DETALLES_MAX } from "@/lib/validators/propuestas";
+import { DETALLE_MAX, DETALLE_MIN, ETIQUETAS_MOTIVO, MOTIVOS_REPORTE } from "@/lib/validators/reportes-catalogo";
 
 const ESTADO_PROPUESTA = { pendiente: "Pendiente de revisión", aprobada: "Aprobada", rechazada: "Rechazada" };
 
@@ -39,7 +46,7 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
         <p role="alert" className="rounded-md bg-red-100 px-4 py-2 text-red-900">
           {resultado.error}
         </p>
-        <Link href="/catalogo" className="text-sm underline">
+        <Link href="/catalogo" className="text-sm font-bold text-azul underline">
           ← Volver al catálogo
         </Link>
       </main>
@@ -48,8 +55,14 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
   if (resultado.datos === null) notFound();
 
   const carta = resultado.datos;
+  const listaCategorias = await listarCategorias();
+  const categorias = listaCategorias.ok ? listaCategorias.datos.map((c) => ({ id: c.id, nombre: c.nombre })) : [];
   const imagenes = await urlsImagenesOpcionales([carta.id]);
   const url = imagenes[carta.id];
+  const precios =
+    (await obtenerPreciosCartas([{ idApi: carta.id_api, idioma: carta.idioma }])).get(carta.id_api) ?? null;
+  // Un precio por carta y día para el gráfico de evolución (PBI-30).
+  if (precios) await registrarPrecios([{ cartaId: carta.id, acabados: precios.acabados }]);
   // Proponer solo tiene sentido en cartas sin imagen y con sesión iniciada.
   const perfil = carta.tiene_imagen ? null : await obtenerPerfilActual();
   const propuestas = perfil ? await misPropuestas(carta.id) : [];
@@ -63,36 +76,31 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
     ...(carta.stage ? [["Etapa", carta.stage] as [string, string]] : []),
     ...(carta.rarity ? [["Rareza", carta.rarity] as [string, string]] : []),
     ...(carta.subtipos.length > 0 ? [["Subtipos", carta.subtipos.join(", ")] as [string, string]] : []),
-    ["Variantes", carta.variantes_disponibles.length > 0 ? carta.variantes_disponibles.join(", ") : "Ninguna"],
+    ["Variantes", describirVariantes(carta.variantes_disponibles)],
   ];
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-8">
-      <Link href="/catalogo" className="text-sm underline">
+      <Link href="/catalogo" className="text-sm font-bold text-azul underline">
         ← Volver al catálogo
       </Link>
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-        <div className="flex aspect-[5/7] w-full max-w-md items-center justify-center overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-900">
-          <VisorImagen
-            url={url ?? null}
-            urlHd={`/api/cartas/${carta.id}/imagen-hd`}
-            alt={carta.nombre}
-          />
-
+        <div className="flex aspect-[5/7] w-full max-w-md items-center justify-center overflow-hidden rounded-xl border-[3px] border-tinta bg-[#e9e9ee]">
+          <VisorImagen url={url ?? null} urlHd={`/api/cartas/${carta.id}/imagen-hd`} alt={carta.nombre} />
         </div>
 
         <div className="flex flex-col gap-6">
           <div>
             <h1 className="text-3xl font-semibold">{carta.nombre}</h1>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">{carta.id_api}</p>
+            <p className="text-sm text-tinta/75">{carta.id_api}</p>
           </div>
 
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
             {datos.map(([etiqueta, valor]) => (
               <div key={etiqueta} className="contents">
                 <dt className="font-medium">{etiqueta}</dt>
-                <dd className="text-zinc-700 dark:text-zinc-300">{valor}</dd>
+                <dd className="font-bold text-tinta">{valor}</dd>
               </div>
             ))}
           </dl>
@@ -102,9 +110,16 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
           {carta.detalles && (
             <div className="flex flex-col gap-1">
               <h2 className="text-lg font-medium">Detalles</h2>
-              <p className="text-sm whitespace-pre-line text-zinc-700 dark:text-zinc-300">{carta.detalles}</p>
+              <p className="text-sm whitespace-pre-line text-tinta/75">{carta.detalles}</p>
             </div>
           )}
+
+          <section aria-labelledby="precio-titulo" className="flex flex-col gap-3">
+            <h2 id="precio-titulo" className="text-2xl font-bold">
+              Comparador de precios
+            </h2>
+            <ComparadorPrecios precios={precios} />
+          </section>
 
           <div className="flex flex-col gap-2">
             <h2 className="text-lg font-medium">Agregar a mi colección</h2>
@@ -113,19 +128,27 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
               variantes={carta.variantes_disponibles}
               min={CANTIDAD_MIN}
               max={CANTIDAD_MAX}
+              categorias={categorias}
             />
           </div>
+
+          <ReportarError
+            cartaId={carta.id}
+            motivos={MOTIVOS_REPORTE.map((valor) => ({ valor, etiqueta: ETIQUETAS_MOTIVO[valor] }))}
+            detalleMin={DETALLE_MIN}
+            detalleMax={DETALLE_MAX}
+          />
 
           {!carta.tiene_imagen && (
             <div className="flex flex-col gap-2">
               <h2 className="text-lg font-medium">Proponer imagen y detalles</h2>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="text-sm text-tinta/75">
                 Esta carta no tiene imagen. Un administrador revisa cada propuesta antes de publicarla.
               </p>
               {perfil ? (
                 <FormularioPropuesta cartaId={carta.id} descripcionMax={DESCRIPCION_MAX} detallesMax={DETALLES_MAX} />
               ) : (
-                <Link href="/login" className="text-sm underline">
+                <Link href="/login" className="text-sm font-bold text-azul underline">
                   Inicia sesión para proponer una imagen
                 </Link>
               )}

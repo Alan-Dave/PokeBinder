@@ -70,8 +70,8 @@ describe("registrarAccion", () => {
   it("ignora un rol enviado en el formulario", async () => {
     const cliente = sesion();
 
-    await expect(registrarAccion(INICIAL, formulario({ ...VALIDO, rol: "superusuario" }))).rejects.toThrow();
-    expect(JSON.stringify(cliente.auth.signUp.mock.calls)).not.toContain("superusuario");
+    await expect(registrarAccion(INICIAL, formulario({ ...VALIDO, rol: "administrador" }))).rejects.toThrow();
+    expect(JSON.stringify(cliente.auth.signUp.mock.calls)).not.toContain("administrador");
   });
 
   it.each([

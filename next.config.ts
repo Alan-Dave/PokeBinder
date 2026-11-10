@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
-// Cabeceras de seguridad básicas para todas las respuestas. La política de
-// contenido (CSP) completa se define en el endurecimiento de seguridad (PBI-27),
-// cuando se conozcan todos los orígenes que usa la aplicación.
+// Cabeceras de seguridad para todas las respuestas. La política de contenido
+// (CSP) NO está aquí: lleva un valor distinto en cada petición (nonce), así que
+// la envía proxy.ts. Sus límites están explicados en lib/csp.ts (PBI-27).
 const securityHeaders = [
   // Impide que otro sitio incruste la aplicación en un iframe (clickjacking).
   { key: "X-Frame-Options", value: "DENY" },
