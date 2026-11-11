@@ -8,8 +8,8 @@ de base de datos.
 ## Método
 
 La regla 6 del proyecto exige que el rol y la sesión se verifiquen en el servidor.
-Se revisó cada punto de entrada de datos: las 12 Server Actions (`"use server"`),
-las 6 rutas `route.ts` y las 43 funciones exportadas de los módulos de `lib/` que
+Se revisó cada punto de entrada de datos: los 12 archivos de Server Actions (`"use server"`),
+las 6 rutas `route.ts` y las 46 funciones exportadas de 15 módulos de `lib/` que
 leen o escriben datos. Para cada una: ¿exige sesión?, ¿valida la entrada con zod?,
 ¿qué decide a quién pertenece el dato?
 
