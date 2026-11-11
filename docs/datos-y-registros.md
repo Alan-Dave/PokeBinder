@@ -18,7 +18,7 @@ tablas en Supabase**: eso necesita acceso a los paneles y está pendiente (ver a
 | Binders y su contenido | `binders`, `binder_casillas` | Cuando el usuario los arma | Solo su dueño (RLS) | Sí |
 | Reportes de errores del catálogo (motivo y **texto libre** de 10 a 500 caracteres) | `reportes_catalogo` | Cuando el usuario lo envía; máximo 20 por día | Su autor; administradores y superusuarios ven todos | Puede serlo: el texto lo escribe la persona |
 | Bitácora: cambios de rol, consultas de la lista de perfiles y de la propia bitácora | `auditoria` | Automáticamente, por trigger o dentro de la función SQL | Solo un superusuario, por `listar_auditoria`. Nadie la modifica ni la borra | Sí (identifica a quien actuó) |
-| Precio de mercado por carta, acabado y día | `precios_historial` | Cuando un usuario con sesión abre su colección; un valor por carta y día | Cualquier usuario con sesión; escribe solo el servidor | No: no lleva usuario |
+| Precio de mercado por carta, acabado y día | `precios_historial` | Cuando se abre Mi colección o la ficha de una carta; un valor por carta y día. Hasta el PR de PBI-X28 también lo provocaba un visitante sin sesión en la ficha pública (hallazgo F6, corregido) | Cualquier usuario con sesión; escribe solo el servidor | No: no lleva usuario |
 | Catálogo (cartas, sets) | `cartas`, `sets` | Por la ingesta, fuera de la aplicación | Público | No |
 | Sesión (token de acceso y de renovación) | Cookies `sb-…-auth-token` | Al iniciar sesión; se renuevan en cada petición (`proxy.ts`) | El navegador del usuario y el servidor | Sí |
 | Preferencia de sonido (sí/no) | `localStorage` del navegador | Al activarla | Solo ese navegador; nunca viaja al servidor | No |
