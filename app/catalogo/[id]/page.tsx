@@ -55,8 +55,11 @@ export default async function FichaCartaPage({ params }: { params: Promise<{ id:
   const url = imagenes[carta.id];
   const precios =
     (await obtenerPreciosCartas([{ idApi: carta.id_api, idioma: carta.idioma }])).get(carta.id_api) ?? null;
-  // Un precio por carta y día para el gráfico de evolución (PBI-30).
-  if (precios) await registrarPrecios([{ cartaId: carta.id, acabados: precios.acabados }]);
+  // Un precio por carta y día para el gráfico de evolución (PBI-30). Solo con
+  // sesión (listarCategorias falla sin ella): esta ficha es pública y escribir
+  // aquí con la clave de servicio dejaría que un rastreador llene la tabla
+  // recorriendo el catálogo. Quien tiene la carta igual la registra al abrir Mi colección.
+  if (precios && listaCategorias.ok) await registrarPrecios([{ cartaId: carta.id, acabados: precios.acabados }]);
 
   // Solo se listan los datos que la carta tiene: una fila vacía no informa nada.
   const datos: [string, string][] = [
