@@ -103,24 +103,28 @@ ejecutó la prueba contra el proyecto remoto.
   mazos; la auditoría queda con `usuario_id` huérfano a propósito. Si la Ley
   21.719 exige un flujo formal de solicitud y respuesta, es un PBI aparte.
 
-## Riesgo aceptado: `braces` en las dependencias de desarrollo
+## Dependencias: estado y riesgos aceptados
 
-`npm audit` reporta una vulnerabilidad de severidad alta en `braces`
-(GHSA-vfj7-8cjw-p6xm: denegación de servicio por patrones anidados). La
-versión instalada, 3.0.3, es la última publicada en npm y el aviso cubre todas
-las versiones: **no existe una versión corregida**. Llega por esta cadena:
-`eslint-config-next` → `@next/eslint-plugin-next` → `fast-glob` →
-`micromatch` → `braces`.
+El pipeline ejecuta `npm audit --audit-level=high` sobre **todas** las
+dependencias (producción y desarrollo) y `pip-audit` sobre
+`ingesta/requirements.txt`. Una severidad alta o crítica deja el PR en rojo.
+Estado el 11 de noviembre de 2026: **0 altas, 0 críticas, 10 moderadas**.
 
-- **Por qué se acepta:** toda la cadena es dependencia de desarrollo (ESLint).
-  No se incluye en el build de producción ni procesa entrada de usuarios; solo
-  expande patrones de archivos del propio repositorio.
-- **Qué cambió en el pipeline:** el paso de dependencias npm pasó a
-  `npm audit --omit=dev --audit-level=high`. Las dependencias de producción
-  siguen bloqueando el PR ante severidad alta o crítica; las de desarrollo
-  dejan de hacerlo.
-- **La alternativa descartada:** `npm audit fix --force` propone bajar a
-  `eslint-config-next@14.2.35`, un retroceso de dos versiones mayores.
-- **Cuándo revisarlo:** si `braces` publica una versión posterior a 3.0.3, o
-  `eslint-config-next` deja de depender de ella, volver a
-  `npm audit --audit-level=high` sin `--omit=dev`.
+**Resuelto.** Hasta la revisión de PBI-X31 el pipeline auditaba con
+`--omit=dev` porque `braces` (alta, sin versión corregida) llegaba por
+`eslint-config-next`; y `vite` 8.3.0 (alta, por `vitest`) quedaba oculto por esa
+exclusión. `braces` ya no aparece en el informe con las versiones actuales, y
+`vitest` 5.1.0 (actualización menor) trae `vite` 8.3.7. Con ambos resueltos se
+volvió a auditar todo.
+
+**Riesgos aceptados (moderados).** Ninguno tiene una corrección que no sea
+retroceder versiones mayores:
+
+| Paquete (ruta) | Aviso | Por qué se acepta | Alternativa descartada |
+|---|---|---|---|
+| `uuid` < 11.1.1 (por `exceljs`, **producción**) | GHSA-w5hq-g745-h8pq: falta una comprobación de límites en `v3`, `v5` y `v6` **cuando se pasa un `buf`** | `exceljs` 4.4.0 (la última) solo llama a `uuidv4()` sin argumentos, así que no pasa por el código afectado. Además solo se usa para **escribir** archivos (`lib/xlsx.ts`), nunca para leer los de un usuario | `npm audit fix --force` baja a `exceljs` 3.4.0, un retroceso de una versión mayor, más antigua y con menos mantenimiento |
+| `minimatch` y `@typescript-eslint/*` (por `eslint-config-next`, **desarrollo**) | GHSA-g3hv-75wg-m249: denegación de servicio por patrones de archivo | Solo ESLint, con patrones del propio repositorio; no entra al build ni procesa datos de usuarios | `npm audit fix --force` baja a `eslint-config-next` 15.5.29, un retroceso de una versión mayor |
+
+- **Cuándo revisarlo:** al publicarse una versión de `exceljs` que dependa de
+  `uuid` ≥ 11.1.1, o de `eslint-config-next` que traiga `minimatch` ≥ 11.0.1.
+  Cada cambio de dependencias vuelve a pasar por el pipeline.

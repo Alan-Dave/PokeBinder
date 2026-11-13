@@ -84,12 +84,11 @@ stages:
         steps:
           - template: .azure/pasos-node.yml
 
-          # Falla ante severidad alta o crítica.
-          # --omit=dev: solo se auditan las dependencias que llegan a producción.
-          # Riesgo aceptado y documentado en docs/seguridad.md: braces (cadena de
-          # eslint-config-next, solo desarrollo) no tiene versión corregida en npm.
-          # Cuando la tenga, volver a "npm audit --audit-level=high" sin --omit=dev.
-          - script: npm audit --omit=dev --audit-level=high
+          # Falla ante severidad alta o crítica, también en dependencias de
+          # desarrollo (vitest, ESLint): una herramienta comprometida corre en la
+          # máquina de quien trabaja y en el pipeline. Las de severidad moderada
+          # no bloquean; se revisan y justifican en docs/seguridad.md.
+          - script: npm audit --audit-level=high
             displayName: Revisar dependencias npm (npm audit)
 
           - task: UsePythonVersion@0
