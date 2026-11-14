@@ -2,6 +2,7 @@ import Link from "next/link";
 import FilaColeccion from "@/components/FilaColeccion";
 import PanelCategorias from "@/components/PanelCategorias";
 import { categoriasDeCartas, listarCategorias } from "@/lib/categorias";
+import { urlsImagenesOpcionales } from "@/lib/catalogo";
 import { listarInventario, SIN_SESION, TAMANO_PAGINA } from "@/lib/inventario";
 import { registrarPrecios } from "@/lib/historial-precios";
 import { formatearUsd, precioDeVariante, valorDeColeccion } from "@/lib/precios";
@@ -70,6 +71,8 @@ export default async function ColeccionPage({
       return p ? [{ cartaId: f.carta_id, acabados: p.acabados.map((a) => ({ acabado: a.acabado, mercado: a.mercado })) }] : [];
     }),
   );
+  // Miniaturas: bucket, luego TCGdex y, si ninguna carga, la ilustración de «Imagen no disponible».
+  const imagenes = await urlsImagenesOpcionales(filas.map((f) => f.carta_id));
   const preciosDeFila = filas.map((f) => (f.cartas ? precioDeVariante(precios.get(f.cartas.id_api), f.variante) : null));
   const textosPrecio = preciosDeFila.map((p) => (p === null ? null : formatearUsd(p)));
   const valor = valorDeColeccion(filas.map((f, i) => ({ precio: preciosDeFila[i], cantidad: f.cantidad })));
@@ -123,6 +126,7 @@ export default async function ColeccionPage({
               min={CANTIDAD_MIN}
               max={CANTIDAD_MAX}
               precio={textosPrecio[i]}
+              imagenUrl={imagenes[fila.carta_id] ?? null}
               categorias={categorias}
               categoriasDeLaFila={categoriasPorFila.get(fila.id) ?? []}
             />

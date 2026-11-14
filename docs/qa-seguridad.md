@@ -82,6 +82,25 @@ Supabase. Se prohíben iframes (`frame-ancestors 'none'`), plugins, `<base>` aje
 y formularios que envíen a otro sitio. Verificada compilando en modo producción y
 leyendo la cabecera; **no** se probó en un navegador.
 
+## Revisión de dependencias y del pipeline (PBI-X31, 11 de noviembre de 2026)
+
+| Control | Qué se comprobó | Resultado |
+|---|---|---|
+| `npm audit` | Informe completo, producción y desarrollo | Había **1 alta** (`vite` 8.3.0, por `vitest`) y 13 moderadas. El pipeline no la veía porque auditaba con `--omit=dev` |
+| Corrección | `vitest` y `@vitest/coverage-v8` de 5.0.x a 5.1.0 (actualización menor; trae `vite` 8.3.7). Sin dependencias nuevas | **0 altas, 0 críticas, 10 moderadas** |
+| Pipeline | `azure-pipelines.yml` pasa de `npm audit --omit=dev --audit-level=high` a `npm audit --audit-level=high` | Ahora una alta en una herramienta de desarrollo también bloquea el PR |
+| Riesgos aceptados | `uuid` por `exceljs` (producción) y `minimatch`/`@typescript-eslint` por `eslint-config-next` (desarrollo) | Justificados en [seguridad.md](seguridad.md): corregirlos exige retroceder versiones mayores y el código afectado no se ejecuta |
+| Compilación y pruebas con lo actualizado | `tsc`, ESLint, `next build`, 1209 pruebas de Vitest | Sin errores |
+| Etapas del pipeline en el PR #82 | gitleaks, dependencias (`npm audit` y `pip-audit`), ESLint, Semgrep, pruebas y compilación | Las 6 en verde |
+
+**Sin verificar todavía:**
+
+- Que el pipeline *falle* ante un secreto y ante una dependencia vulnerable: hace falta una rama de prueba con
+  datos falsos. Se dejó sin hacer a propósito porque un secreto falso queda en el historial de GitHub.
+  El `npm audit` completo, en cambio, sí se vio fallar de forma natural con la alta de `vite`.
+- `pip-audit` y Semgrep no se ejecutaron en el equipo local (no están instalados); solo constan sus resultados en el pipeline.
+- `ingesta/requirements.txt` ahora fija también las dependencias de `psycopg`; `pip-audit` lo evaluará en el siguiente PR.
+
 ## Pruebas manuales pendientes (necesitan personas y navegador)
 
 Estas no se pueden hacer desde el código; se recomienda hacerlas entre las dos
@@ -89,6 +108,16 @@ con la aplicación abierta y la consola del navegador y los logs del servidor a 
 
 1. **Dos cuentas normales:** que A no vea ni modifique inventario, mazos, binders ni
    reportes de B (probando también cambiando ids en la URL y en formularios).
+   **Capa de base de datos: verificada el 10 de noviembre de 2026** con
+   `supabase/tests/aislamiento_entre_usuarios.test.sql` (se pega en el SQL Editor;
+   simula dos usuarios y un visitante y termina en `ROLLBACK`). Terminó sin errores
+   en Supabase: el usuario A no puede leer, modificar, borrar ni crear nada a nombre
+   de B en inventario, mazos, cartas de mazo, binders, casillas, reportes y perfiles;
+   no puede subirse el rol; la auditoría no es accesible por la API y un visitante sin
+   sesión no lee inventario ni mazos. El editor no muestra el aviso final (`NOTICE`),
+   pero cada comprobación es un `assert` o un `raise exception` que habría detenido la
+   ejecución. **Falta** la prueba con dos cuentas reales en el navegador (cambiando ids
+   en la URL y en formularios), que cubre también la capa de la aplicación.
 2. **Cuenta normal contra rutas de administración:** abrir `/admin/usuarios`,
    `/admin/auditoria` y `/admin/reportes` y confirmar que no muestran datos.
 3. **Consola del navegador:** recorrer todas las pantallas y confirmar que la CSP no

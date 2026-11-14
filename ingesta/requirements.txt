@@ -1,1 +1,28 @@
+# Dependencias de los scripts de ingesta del catálogo (proceso Python separado,
+# fuera de la aplicación Next.js). Requiere Python 3.10 o superior.
+#
+# Instalación (desde la raíz del repositorio):
+#   python -m venv .venv
+#   .venv\Scripts\activate            (Windows)   |   source .venv/bin/activate   (Linux/macOS)
+#   pip install -r ingesta/requirements.txt
+#
+# Pruebas (solo usan la biblioteca estándar, no necesitan nada más):
+#   python -m unittest discover ingesta
+#
+# El pipeline audita este archivo con pip-audit (azure-pipelines.yml). Todo va
+# con versión exacta para que cada instalación sea idéntica y auditable.
+
+# Conexión a PostgreSQL de Supabase. La usan migrar_catalogo.py,
+# emparejar_imagenes.py y completar_categorias.py. El extra [binary] trae el
+# controlador ya compilado, sin necesitar compilador ni libpq en el equipo.
 psycopg[binary]==3.3.6
+psycopg-binary==3.3.6
+
+# Dependencias de psycopg, fijadas por la misma razón.
+typing-extensions==4.15.0
+tzdata==2025.2
+
+# Sin dependencias de terceros (solo biblioteca estándar de Python):
+#   subir_imagenes.py        sube las imágenes al bucket Images (urllib)
+#   completar_categorias.py  consulta la API de TCGdex (urllib)
+#   migrar_catalogo.py       lee PokeDatabase.db (sqlite3)

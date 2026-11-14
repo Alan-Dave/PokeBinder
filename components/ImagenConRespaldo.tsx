@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useImagenFallida } from "@/components/useImagenFallida";
 
 /** Ilustración que se muestra cuando una carta no tiene imagen o no carga (PBI-X15). */
 export const IMAGEN_NO_DISPONIBLE = "/imagen-no-disponible.webp";
@@ -31,6 +32,8 @@ export default function ImagenConRespaldo({ src, alt, draggable = true }: Props)
   // Se recuerda cuál URL falló, de modo que una URL nueva se intente de nuevo.
   const [fallida, setFallida] = useState<string | null>(null);
 
+  const refImagen = useImagenFallida(() => setFallida(src));
+
   if (!src || fallida === src) {
     return <ImagenNoDisponible alt={alt ? `${alt} (imagen no disponible)` : ""} />;
   }
@@ -43,6 +46,7 @@ export default function ImagenConRespaldo({ src, alt, draggable = true }: Props)
       alt={alt}
       draggable={draggable}
       loading="lazy"
+      ref={refImagen}
       onError={() => setFallida(src)}
       className="h-full w-full object-contain"
     />

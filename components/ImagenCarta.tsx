@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ImagenNoDisponible } from "@/components/ImagenConRespaldo";
+import { useImagenFallida } from "@/components/useImagenFallida";
 
 type Props = {
   // Imagen firmada del bucket; null si la carta no tiene.
@@ -21,6 +22,9 @@ type Props = {
 export default function ImagenCarta({ url, urlRespaldo, alt }: Props) {
   const [fuentes, setFuentes] = useState<string[]>(url ? [url, urlRespaldo] : [urlRespaldo]);
 
+  const pasarASiguiente = () => setFuentes((actuales) => actuales.slice(1));
+  const refImagen = useImagenFallida(pasarASiguiente);
+
   if (fuentes.length === 0) {
     return <ImagenNoDisponible alt={`${alt} (imagen no disponible)`} />;
   }
@@ -34,7 +38,8 @@ export default function ImagenCarta({ url, urlRespaldo, alt }: Props) {
       src={fuentes[0]}
       alt={alt}
       loading="lazy"
-      onError={() => setFuentes((actuales) => actuales.slice(1))}
+      ref={refImagen}
+      onError={pasarASiguiente}
       className="h-full w-full object-contain"
     />
   );
