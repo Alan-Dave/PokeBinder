@@ -48,6 +48,18 @@ describe("urlImagenAltaDefinicion", () => {
     expect(urlImagenAltaDefinicion(BASE_IMAGEN, "min")).toBe("https://assets.tcgdex.net/en/base/base1/4/low.webp");
   });
 
+  it("acepta las rutas del chino (zh-tw, zh-cn) y rechaza otros idiomas raros", () => {
+    expect(urlImagenAltaDefinicion("https://assets.tcgdex.net/zh-tw/SV/SV9a/022", "min")).toBe(
+      "https://assets.tcgdex.net/zh-tw/SV/SV9a/022/low.webp",
+    );
+    expect(urlImagenAltaDefinicion("https://assets.tcgdex.net/zh-cn/SV/SV9a/022")).toBe(
+      "https://assets.tcgdex.net/zh-cn/SV/SV9a/022/high.webp",
+    );
+    expect(urlImagenAltaDefinicion("https://assets.tcgdex.net/zh-tw-x/SV/SV9a/022")).toBeNull();
+    expect(urlImagenAltaDefinicion("https://assets.tcgdex.net/z/SV/SV9a/022")).toBeNull();
+    expect(urlImagenAltaDefinicion("https://assets.tcgdex.net/zh-/SV/SV9a/022")).toBeNull();
+  });
+
   it("valida la URL igual de estricto con el tamaño min", () => {
     expect(urlImagenAltaDefinicion("https://evil.example/en/base/base1/4", "min")).toBeNull();
   });

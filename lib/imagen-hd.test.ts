@@ -12,9 +12,12 @@ describe("idiomasAProbar", () => {
     expect(idiomasAProbar("ja")).toEqual(["ja", "en"]);
   });
 
-  it("no repite el inglés y manda el chino directo a inglés", () => {
+  it("no repite el inglés", () => {
     expect(idiomasAProbar("en")).toEqual(["en"]);
-    expect(idiomasAProbar("zh")).toEqual(["en"]);
+  });
+
+  it("prueba el chino tradicional, el simplificado y después el inglés", () => {
+    expect(idiomasAProbar("zh")).toEqual(["zh-tw", "zh-cn", "en"]);
   });
 });
 

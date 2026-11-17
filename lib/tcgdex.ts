@@ -38,7 +38,7 @@ export function urlCarta(idioma: IdiomaTcgdex, idApi: string): string | null {
   return `https://${HOST_API}/v2/${idioma}/cards/${id.data}`;
 }
 
-const RUTA_IMAGEN = /^\/[a-z]{2}\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
+const RUTA_IMAGEN = /^\/[a-z]{2}(?:-[a-z]{2})?\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
 
 /**
  * Valida la URL base que TCGdex devuelve en "image" y arma la de la imagen

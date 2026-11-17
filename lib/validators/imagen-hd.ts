@@ -38,7 +38,8 @@ export const idApiSchema = z
 
 // Idiomas del catálogo que TCGdex entiende con el mismo código. El chino
 // ("zh") no existe en TCGdex con ese código: esas cartas caen al inglés.
-export const IDIOMAS_TCGDEX = ["en", "es", "fr", "pt", "ja"] as const;
+// El chino de TCGdex va en dos variantes (zh-tw y zh-cn); nuestro catálogo lo guarda como "zh".
+export const IDIOMAS_TCGDEX = ["en", "es", "fr", "pt", "ja", "zh-tw", "zh-cn"] as const;
 
 export type IdiomaTcgdex = (typeof IDIOMAS_TCGDEX)[number];
 
