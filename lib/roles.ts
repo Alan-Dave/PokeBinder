@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
-import { asignarRolSchema, type Rol } from "@/lib/validators/roles";
+import { asignarRolSchema, listarPerfilesSchema, USUARIOS_POR_PAGINA, type Rol } from "@/lib/validators/roles";
 
 /**
  * Asignación de roles del lado del servidor.
@@ -53,10 +53,40 @@ export async function asignarRol(entrada: unknown): Promise<Resultado<null>> {
   return { ok: true, datos: null };
 }
 
-export async function listarPerfiles(): Promise<Resultado<Perfil[]>> {
+export type PaginaPerfiles = {
+  perfiles: Perfil[];
+  total: number;
+  pagina: number;
+  porPagina: number;
+};
+
+/**
+ * Devuelve una página de perfiles. La función SQL entrega la lista completa
+ * (ordenada por alta, ya con la comprobación de superusuario y la bitácora);
+ * aquí se corta en páginas de USUARIOS_POR_PAGINA. Con la cantidad de usuarios
+ * de la plataforma es más simple que cambiar la firma de la función en la base.
+ */
+export async function listarPerfiles(entrada: unknown = {}): Promise<Resultado<PaginaPerfiles>> {
+  const validado = listarPerfilesSchema.safeParse(entrada);
+  if (!validado.success) {
+    return { ok: false, error: validado.error.issues[0].message };
+  }
+  const { pagina } = validado.data;
+
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("listar_perfiles");
 
   if (error) return { ok: false, error: traducirError(error.code, "listar_perfiles", error) };
-  return { ok: true, datos: data as Perfil[] };
+
+  const todos = (data ?? []) as Perfil[];
+  const desde = (pagina - 1) * USUARIOS_POR_PAGINA;
+  return {
+    ok: true,
+    datos: {
+      perfiles: todos.slice(desde, desde + USUARIOS_POR_PAGINA),
+      total: todos.length,
+      pagina,
+      porPagina: USUARIOS_POR_PAGINA,
+    },
+  };
 }

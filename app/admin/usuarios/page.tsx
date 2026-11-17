@@ -11,9 +11,12 @@ export const metadata = { title: "Usuarios y roles · PokeBinder" };
 
 const FORMATO_FECHA = new Intl.DateTimeFormat("es-CL", { dateStyle: "short" });
 
-export default async function UsuariosPage() {
+type Props = { searchParams: Promise<{ pagina?: string }> };
+
+export default async function UsuariosPage({ searchParams }: Props) {
+  const { pagina } = await searchParams;
   // El rol se verifica en la base (listar_perfiles); aquí solo se muestra el resultado.
-  const [resultado, actual] = await Promise.all([listarPerfiles(), obtenerPerfilActual()]);
+  const [resultado, actual] = await Promise.all([listarPerfiles({ pagina }), obtenerPerfilActual()]);
 
   if (!resultado.ok) {
     return (
@@ -24,6 +27,10 @@ export default async function UsuariosPage() {
       </main>
     );
   }
+
+  const { perfiles, total, pagina: paginaActual, porPagina } = resultado.datos;
+  const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
+  const enlace = (p: number) => `/admin/usuarios?pagina=${p}`;
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-4 p-8">
@@ -47,7 +54,7 @@ export default async function UsuariosPage() {
             </tr>
           </thead>
           <tbody>
-            {resultado.datos.map((perfil) => (
+            {perfiles.map((perfil) => (
               <tr key={perfil.id} className="border-b-2 border-tinta/20 align-top">
                 <td className="py-2 pr-4">{perfil.nombre_visible}</td>
                 <td className="py-2 pr-4 whitespace-nowrap">{FORMATO_FECHA.format(new Date(perfil.creado_en))}</td>
@@ -63,6 +70,14 @@ export default async function UsuariosPage() {
           </tbody>
         </table>
       </div>
+
+      <nav aria-label="Paginación" className="flex items-center gap-4 text-sm">
+        {paginaActual > 1 ? <Link href={enlace(paginaActual - 1)}>← Anterior</Link> : <span />}
+        <span>
+          Página {paginaActual} de {totalPaginas} · {total} usuarios
+        </span>
+        {paginaActual < totalPaginas ? <Link href={enlace(paginaActual + 1)}>Siguiente →</Link> : <span />}
+      </nav>
     </main>
   );
 }
