@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
-import { asignarRolSchema, type Rol } from "@/lib/validators/roles";
+import { asignarRolSchema, listarPerfilesSchema, USUARIOS_POR_PAGINA, type Rol } from "@/lib/validators/roles";
 
 /**
  * Asignación de roles del lado del servidor.
@@ -53,10 +53,42 @@ export async function asignarRol(entrada: unknown): Promise<Resultado<null>> {
   return { ok: true, datos: null };
 }
 
-export async function listarPerfiles(): Promise<Resultado<Perfil[]>> {
+export type PaginaPerfiles = {
+  perfiles: Perfil[];
+  total: number;
+  pagina: number;
+  porPagina: number;
+};
+
+/**
+ * Devuelve una página de perfiles. La función SQL listar_perfiles(p_pagina,
+ * p_tamano) corta la lista en la base, con la comprobación de superusuario y
+ * el registro en la bitácora: la aplicación solo recibe los usuarios que muestra.
+ */
+export async function listarPerfiles(entrada: unknown = {}): Promise<Resultado<PaginaPerfiles>> {
+  const validado = listarPerfilesSchema.safeParse(entrada);
+  if (!validado.success) {
+    return { ok: false, error: validado.error.issues[0].message };
+  }
+  const { pagina } = validado.data;
+
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("listar_perfiles");
+  const { data, error } = await supabase.rpc("listar_perfiles", {
+    p_pagina: pagina,
+    p_tamano: USUARIOS_POR_PAGINA,
+  });
 
   if (error) return { ok: false, error: traducirError(error.code, "listar_perfiles", error) };
-  return { ok: true, datos: data as Perfil[] };
+
+  const filas = (data ?? []) as (Perfil & { total: number | string })[];
+  // count(*) es bigint: se normaliza por si llega como texto.
+  const total = filas.length > 0 ? Number(filas[0].total) : 0;
+  const perfiles: Perfil[] = filas.map((fila) => ({
+    id: fila.id,
+    nombre_visible: fila.nombre_visible,
+    rol: fila.rol,
+    creado_en: fila.creado_en,
+  }));
+
+  return { ok: true, datos: { perfiles, total, pagina, porPagina: USUARIOS_POR_PAGINA } };
 }
