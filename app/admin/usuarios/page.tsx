@@ -72,11 +72,21 @@ export default async function UsuariosPage({ searchParams }: Props) {
       </div>
 
       <nav aria-label="Paginación" className="flex items-center gap-4 text-sm">
-        {paginaActual > 1 ? <Link href={enlace(paginaActual - 1)}>← Anterior</Link> : <span />}
-        <span>
-          Página {paginaActual} de {totalPaginas} · {total} usuarios
-        </span>
-        {paginaActual < totalPaginas ? <Link href={enlace(paginaActual + 1)}>Siguiente →</Link> : <span />}
+        {perfiles.length === 0 && paginaActual > 1 ? (
+          // La base no cuenta filas si la página pasa del final: se vuelve al inicio.
+          <>
+            <span>No hay usuarios en esta página.</span>
+            <Link href={enlace(1)}>Ir a la primera página</Link>
+          </>
+        ) : (
+          <>
+            {paginaActual > 1 ? <Link href={enlace(paginaActual - 1)}>← Anterior</Link> : <span />}
+            <span>
+              Página {paginaActual} de {totalPaginas} · {total} usuarios
+            </span>
+            {paginaActual < totalPaginas ? <Link href={enlace(paginaActual + 1)}>Siguiente →</Link> : <span />}
+          </>
+        )}
       </nav>
     </main>
   );
