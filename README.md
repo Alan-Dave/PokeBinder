@@ -121,5 +121,5 @@ Una rama por tarjeta (`feature/PBI-XX-descripcion`) desde `develop`, commits `PB
 ## Notas operativas
 
 - **El catálogo se migra, no se descarga:** las 95.000 cartas salen de `PokeDatabase.db` (SQLite) hacia PostgreSQL con los scripts de `/ingesta`. Ese archivo y los scripts son el respaldo: no hay respaldos automáticos.
-- **Supabase gratuito** se pausa tras 7 días sin actividad; una tarea programada lo evita.
+- **Supabase gratuito** se pausa tras 7 días sin actividad; el flujo `.github/workflows/mantener-activo.yml` lo evita pidiendo `/catalogo` cada 2 días (necesita la variable de repositorio `APP_URL`).
 - **Menores de edad:** decisión pendiente; la aplicación no recolecta fecha de nacimiento.
