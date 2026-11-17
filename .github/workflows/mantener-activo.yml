@@ -1,0 +1,54 @@
+# Evita que Supabase pause el proyecto gratuito por inactividad (PBI-X33).
+#
+# Supabase pausa un proyecto gratuito tras 7 días sin actividad. Cada 2 días este
+# flujo pide /catalogo a la aplicación en producción: esa página lee de la base de
+# datos por la API de Supabase, así que cuenta como actividad. (/estado no sirve:
+# solo consulta el servicio de Auth.)
+#
+# Configuración (una sola vez, la hace una persona del equipo):
+#   GitHub → Settings → Secrets and variables → Actions → pestaña Variables →
+#   New repository variable: APP_URL = https://<dominio-de-produccion>
+# Es una variable, no un secreto: la URL es pública. Este flujo no usa ningún secreto.
+#
+# Si la petición falla, el flujo termina en rojo y GitHub avisa por correo a quien
+# administra el repositorio: es la señal de que la aplicación o la base no responden.
+#
+# Aviso: GitHub desactiva los flujos programados tras 60 días sin actividad en el
+# repositorio. Con el proyecto en uso no ocurre; si pasa, se reactiva en la pestaña Actions.
+
+name: Mantener activo Supabase
+
+on:
+  schedule:
+    - cron: "17 9 */2 * *"
+  workflow_dispatch:
+
+# El flujo no necesita leer ni escribir nada del repositorio.
+permissions: {}
+
+jobs:
+  ping:
+    name: Pedir /catalogo a producción
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Comprobar y pedir la página
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_URL:-}" ]; then
+            echo "::error::Falta la variable de repositorio APP_URL (ver el comentario de este archivo)."
+            exit 1
+          fi
+          case "$APP_URL" in
+            https://*) ;;
+            *) echo "::error::APP_URL debe empezar con https://"; exit 1 ;;
+          esac
+          url="${APP_URL%/}/catalogo"
+          # --fail: cualquier respuesta 4xx o 5xx deja el flujo en rojo.
+          # --max-redirs 0: no sigue redirecciones a otro sitio.
+          codigo=$(curl --silent --show-error --fail --retry 3 --retry-delay 10 \
+            --max-time 60 --max-redirs 0 --output /dev/null \
+            --write-out '%{http_code}' "$url")
+          echo "GET $url -> HTTP $codigo"
