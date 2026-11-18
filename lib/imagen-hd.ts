@@ -90,6 +90,8 @@ async function obtenerDeIdioma(idioma: IdiomaTcgdex, idApi: string, tamano: Tama
 
 /** Idiomas a probar, en orden y sin repetir. */
 export function idiomasAProbar(idiomaCarta: string): IdiomaTcgdex[] {
+  // Nuestro "zh" no existe en TCGdex: se prueba el chino tradicional y después el simplificado.
+  if (idiomaCarta === "zh") return ["zh-tw", "zh-cn", "en"];
   return esIdiomaTcgdex(idiomaCarta) && idiomaCarta !== "en" ? [idiomaCarta, "en"] : ["en"];
 }
 
