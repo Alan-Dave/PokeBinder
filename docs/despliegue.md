@@ -54,6 +54,7 @@ Flujo de ramas: `feature/*` → PR a `develop` (aprobado por el otro integrante)
 
 ## 5. Operación
 
+- **Rama de producción en Vercel.** Debe ser `main` (Settings → Environments → Production → Branch Tracking). El 16 de noviembre de 2026 seguía apuntando a `integracion/prueba-completa`, una rama ya borrada: lo fusionado en `main` se publicaba como «Preview» y el sitio quedó congelado en la versión del 8 de noviembre. Antes de borrar una rama, comprobar que ningún servicio (Vercel, Azure Pipelines) la use.
 - **Pausa del plan gratuito.** Supabase pausa el proyecto tras 7 días sin actividad. El flujo `.github/workflows/mantener-activo.yml` pide `/catalogo` a producción cada 2 días para evitarlo; necesita la variable de repositorio `APP_URL` (ver el comentario del archivo). Si ya se pausó, se reactiva desde el panel (Resume project). Esto ocurrió el 16 de noviembre de 2026, cuando todavía no existía la tarea que `CLAUDE.md` y el README daban por hecha; la recuperación de contraseña falló porque Auth estaba apagado.
 - **Sin respaldos automáticos.** `PokeDatabase.db` y el script de migración son el respaldo del catálogo. Los datos de usuarios no tienen respaldo en el plan gratuito: exportar periódicamente si importan.
 - **Rotar secretos.** Si una clave se filtra, se regenera en Supabase, se actualiza en el App Service y se reinicia. Nunca se pega en el chat, en un issue ni en un commit; gitleaks vigila el repositorio.

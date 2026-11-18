@@ -31,9 +31,9 @@ Fecha: ____ · Quién probó: ____ · Versión (commit o despliegue): ____
 
 | # | Paso | Esperado | Resultado | Evidencia |
 |---|---|---|---|---|
-| 2.1 | A abre `/admin/usuarios` | Aviso de permiso, sin lista | | |
-| 2.2 | A abre `/admin/auditoria` | Aviso de permiso | | |
-| 2.3 | A abre `/admin/reportes` | Aviso de permiso | | |
+| 2.1 | A abre `/admin/usuarios` | Aviso de permiso, sin lista | **Pasa** | Confirmado por Macarena el 16/11/2026: solo el aviso de permiso, sin listas |
+| 2.2 | A abre `/admin/auditoria` | Aviso de permiso | **Pasa** | Confirmado por Macarena el 16/11/2026: solo el aviso de permiso, sin listas |
+| 2.3 | A abre `/admin/reportes` | Aviso de permiso | **Pasa** | Confirmado por Macarena el 16/11/2026: solo el aviso de permiso, sin listas |
 | 2.4 | Administrador abre `/admin/reportes` y `/admin/auditoria` | Ve datos; en `/admin/usuarios` solo lo que su rol permite | | |
 
 ## 3. Consola del navegador y CSP (AB#94 · PBI-X27)
@@ -46,7 +46,7 @@ Recorrer con la Consola filtrada por **Errores**: `/`, `/catalogo` (3 páginas),
 |---|---|---|---|
 | 3.1 | Ningún «violates the Content Security Policy» | | |
 | 3.2 | Imágenes, gráfico de evolución y PDF funcionan | | |
-| 3.3 | Las 404 de imágenes son solo de cartas sin imagen y muestran la ilustración de reemplazo | | |
+| 3.3 | Las 404 de imágenes son solo de cartas sin imagen y muestran la ilustración de reemplazo | Parcial | Verificado desde el servidor, no en el navegador: la ilustración responde 200 y la ruta de respaldo devuelve 404 para las cartas sin imagen (ver sección 10) |
 | 3.4 | Mi colección muestra la miniatura de cada carta | | |
 
 ## 4. Cookies de sesión (AB#96 · PBI-X29)
@@ -76,10 +76,9 @@ Repetir acciones fallidas (contraseña equivocada, ids inválidos, `/admin/*` si
 
 | # | Esperado | Resultado | Evidencia |
 |---|---|---|---|
-| 6.1 | Ninguna contraseña, token, clave ni correo completo en los registros | | |
+| 6.1 | Ninguna contraseña, token, clave ni correo completo en los registros | Parcial | Vercel (Request Logs): 0 advertencias, 0 errores y 0 fatales durante un recorrido por todas las pantallas. Falta ver la línea `[auth]` del intento con contraseña mala (sección 10) |
 | 6.2 | En el navegador, mensajes genéricos; sin trazas ni nombres de tablas | | |
-| 6.3 | No aparecen `SUPABASE_SECRET_KEY` ni la URL de la base con contraseña | | |
-
+| 6.3 | No aparecen `SUPABASE_SECRET_KEY` ni la URL de la base con contraseña | Parcial | En los registros de Vercel y de Supabase revisados no aparecen claves ni la URL de la base; solo rutas y códigos |
 ## 7. Datos guardados, en Supabase → Table Editor (AB#97)
 
 | # | Tabla | Esperado | Resultado |
@@ -123,3 +122,40 @@ PDF de proxies, crear un binder y arrastrar cartas, enviar un reporte de error, 
 | 9.10 | Reporte de error del catálogo | | | |
 | 9.11 | Dashboard y reportes de faltantes | | | |
 | 9.12 | Portada y logo (ver si se ve estirado; anotar dispositivo y URL) | | | |
+
+## 10. Evidencias y hallazgos del 16 de noviembre de 2026
+
+Resultados parciales a partir de capturas de Vercel y de Supabase. Lo que no figura
+aquí sigue **sin probar**: secciones 1, 3 (salvo 3.3), 4, 5, 7, 8 y 9, y el resto de la 6.
+
+### Hallazgo Q1: producción servía una versión vieja (corregido)
+| | |
+|---|---|
+| **Qué pasaba** | `poke-binder-lemon.vercel.app` no mostraba la ilustración de «Imagen no disponible»: `/imagen-no-disponible.webp` daba 404, y tampoco las miniaturas de Mi colección ni los arreglos del catálogo |
+| **Causa** | En Vercel, la **rama de producción** seguía siendo `integracion/prueba-completa`, borrada el 9 de noviembre. Todos los despliegues «Production» venían de esa rama (el último del 8 de noviembre) y los de `main` se publicaban como «Preview». Lo que se fusionaba en `main` nunca llegaba al sitio |
+| **Corrección** | Settings → Environments → Production → Branch Tracking → `main`, y *Redeploy*. Después `/imagen-no-disponible.webp` responde 200 |
+| **Lección** | Al borrar una rama hay que comprobar que ningún servicio la use. Queda anotado en [despliegue.md](despliegue.md) |
+
+### Hallazgo Q2: el proyecto de Supabase se pausó por inactividad (corregido)
+El 16 de noviembre el proyecto estaba pausado por 7 días sin actividad y la recuperación
+de contraseña fallaba con «No se pudo enviar el correo». La tarea programada que la
+documentación daba por hecha no existía. Se agregó el flujo `.github/workflows/mantener-activo.yml`
+(PR #90 y #91) y la variable `APP_URL`; se lanzó a mano y terminó en verde (`GET /catalogo -> HTTP 200`).
+
+### Hallazgo Q3: las cartas chinas no buscaban su imagen (PR #92, en revisión)
+La ruta `/api/cartas/[id]/imagen-hd` no probaba `zh-tw` ni `zh-cn`, y la validación de la URL
+de imagen rechazaba esas rutas. Las cartas con ids entre 90000 y 93000 daban 404 y mostraban
+la ilustración de reemplazo. Corrección en el PR #92 (PBI-X34).
+
+### Sección 6 · registros del servidor
+| Evidencia | Qué muestra |
+|---|---|
+| Vercel, Request Logs, recorrido por `/`, `/catalogo`, `/coleccion`, `/binder`, `/mazos`, `/dashboard`, `/reportes`, `/cuenta`, `/admin/usuarios`, `/admin/auditoria` | Todas responden 200; «Contains Console Level»: 0 advertencias, 0 errores, 0 fatales |
+| Vercel, intento de inicio de sesión con contraseña mala | `POST /login` 200 (la acción responde con el aviso de error en pantalla) |
+| Supabase, API Gateway, mismo intento | `POST /auth/v1/token?grant_type=password` → **400** (credenciales rechazadas), seguido del cierre de sesión. La URL no lleva datos del usuario |
+| Supabase, última hora | 2,1 mil respuestas 2xx, **10 respuestas 4xx** y **7 respuestas 5xx** |
+
+**Pendiente de la sección 6:**
+1. Esperaba la línea `[auth] Error al iniciar sesión (código: …)` en los registros de Vercel y no apareció. Hay que repetir la prueba con **Live** activo y revisar si se emite.
+2. Revisar las **7 respuestas 5xx** de Supabase (¿de cuando el proyecto estaba pausado o reanudándose?).
+3. Las rutas `/api/cartas/<id>/imagen-hd` con 404 son cartas que TCGdex no tiene; la ruta no escribe ningún mensaje al fallar, así que desde los registros no se ve el motivo.
